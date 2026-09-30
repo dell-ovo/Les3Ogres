@@ -1,0 +1,2605 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Les 3 Ogres</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Press Start 2P', monospace, cursive;
+            background-color: #12151e;
+            color: #ffffff;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* Pixel art canvas scaling */
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            border: 4px solid #3b2d54;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9), 0 0 20px rgba(120, 80, 180, 0.3);
+            background-color: #15121c;
+        }
+
+        /* Retro CRT scanlines effect */
+        .crt::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 10;
+            pointer-events: none;
+            border-radius: 0.5rem;
+        }
+
+        .btn-retro {
+            background: linear-gradient(to bottom, #5c3d88, #3b235e);
+            border: 2px solid #9d6cd8;
+            box-shadow: 0 4px 0 #201138;
+            transition: all 0.1s ease;
+        }
+        .btn-retro:hover {
+            background: linear-gradient(to bottom, #724da3, #4a2e73);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #201138;
+        }
+        .btn-retro:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #201138;
+        }
+        .btn-active {
+            background: linear-gradient(to bottom, #9d6cd8, #60369a) !important;
+            border-color: #e0beff !important;
+            box-shadow: 0 0 12px rgba(224, 190, 255, 0.6) !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 md:p-4">
+    <div id="intro-overlay" style="
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(15, 15, 25, 0.95);
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 20px;
+        box-sizing: border-box;
+        font-family: sans-serif;
+        z-index: 1000;">
+        
+        <div style="
+            max-width: 600px;
+            background: #222;
+            border: 4px solid #ffb74d;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            
+            <h1 style="color: #ffb74d; margin-top: 0;">L'Épopée des 3 Ogres</h1>
+            
+            <p style="font-size: 1.1em; line-height: 1.6; color: #e0e0e0; margin-bottom: 20px;">
+                Dans un monde parallèle, 3 ogres ont appris la naissance prochaine d'un enfant, 
+                ils ont décidé d'aller lui rendre visite et de lui transmettre leurs savoirs et compétences. 
+                Voici une partie de leur épopée.
+            </p>
+            
+            <p style="font-size: 1em; color: #81c784; font-weight: bold; margin-bottom: 30px;">
+                Ce jeu ne se joue qu'en cliquant sur l'écran. Le trio ira dans la direction de votre clic.
+            </p>
+            
+            <button id="start-btn" style="
+                background: #ffb74d;
+                color: #111;
+                border: none;
+                padding: 12px 28px;
+                font-size: 1.2em;
+                font-weight: bold;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: transform 0.1s, background 0.2s;">
+                Commencer l'aventure
+            </button>
+        </div>
+    </div>
+    <!-- Navigation header -->
+    <header class="w-full max-w-5xl mb-3 flex flex-wrap items-center justify-between gap-2 bg-slate-900/90 p-3 rounded-lg border border-purple-900/50 shadow-md">
+        <div class="text-xs md:text-sm font-bold text-purple-300 flex items-center gap-2">
+            <span>Les trois ogres</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button id="btnLevel1" onclick="switchLevel(1)" class="btn-retro px-3 py-2 text-[10px] md:text-xs text-purple-100 rounded cursor-pointer btn-active">
+                NIVEAU 1
+            </button>
+            <button id="btnLevel2" onclick="switchLevel(2)" class="btn-retro px-3 py-2 text-[10px] md:text-xs text-purple-100 rounded cursor-pointer">
+                NIVEAU 2
+            </button>
+            <button id="btnLevel3" onclick="switchLevel(3)" class="btn-retro px-3 py-2 text-[10px] md:text-xs text-purple-100 rounded cursor-pointer">
+                NIVEAU 3
+            </button>
+            <button id="btnLevel4" onclick="switchLevel(4)" class="btn-retro px-3 py-2 text-[10px] md:text-xs text-purple-100 rounded cursor-pointer">
+                NIVEAU 4
+            </button>
+            <button id="btnLevel5" onclick="switchLevel(5)" class="btn-retro px-3 py-2 text-[10px] md:text-xs text-purple-100 rounded cursor-pointer">
+                NIVEAU 5
+            </button>
+        </div>
+    </header>
+
+<!-- Game container -->
+<main class="relative flex flex-col items-center max-w-5xl w-full">
+    
+    <!-- Zone du Canvas (Conteneur de référence) -->
+    <div class="relative crt rounded-lg overflow-hidden w-full flex justify-center bg-black/50 p-2 border border-purple-900/40">
+        <canvas id="gameCanvas" width="960" height="540" class="w-full max-w-[960px] h-auto aspect-[16/9] cursor-pointer rounded"></canvas>
+        <!-- BOÎTE DE DIALOGUE (Texte gardien maximisé, boutons réduits au strict minimum) -->
+        <div id="dialog-overlay" style="
+            display: none;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 960px;
+            max-height: 35%;
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-end;
+            background: transparent;
+            border: none;
+            padding: 0;
+            box-sizing: border-box;">
+            
+            <div style="
+                background: #263238;
+                border: 2px solid #b0bec5;
+                border-bottom: none;
+                border-radius: 6px 6px 0 0;
+                padding: 4px 6px;
+                width: 98%;
+                max-width: 550px;
+                max-height: 100%;
+                display: flex;
+                flex-direction: column;
+                box-sizing: border-box;
+                color: #fff;
+                font-family: sans-serif;
+                box-shadow: 0 -4px 12px rgba(0,0,0,0.5);">
+                
+                <!-- En-tête + texte du gardien MISE EN AVANT MAXIMALE -->
+                <div style="overflow-y: auto; flex: 1; margin-bottom: 2px; min-height: 0;">
+                    <p id="dialog-speaker" style="color: #ff5252; font-weight: bold; margin: 0 0 1px 0; font-size: clamp(0.8rem, 2vw, 1.05rem); line-height: 1.1;">
+                        Gardien :
+                    </p>
+                    <p id="dialog-text" style="font-size: clamp(0.78rem, 1.9vw, 1rem); margin: 0; font-style: italic; line-height: 1.15;">
+                        « Je suis le gardien du Prince de Lu. On ne passera pas sans le mot de passe. »
+                    </p>
+                </div>
+                
+                <!-- Liste de choix RÉDUITE AU STRICT MINIMUM -->
+                <div id="dialog-choices" style="display: flex; flex-direction: column; gap: 1px; flex-shrink: 0;">
+                    <button class="dialog-choice-btn" onclick="handleOgreChoice(1)" style="
+                        background: #37474f; color: #fff; border: 1px solid #78909c;
+                        padding: 0px 3px; text-align: left; border-radius: 2px;
+                        cursor: pointer; font-size: clamp(0.4rem, 0.85vw, 0.58rem); line-height: 0.95;">
+                        1. Bonjour Beau-gosse.
+                    </button>
+                    <button class="dialog-choice-btn" onclick="handleOgreChoice(2)" style="
+                        background: #37474f; color: #fff; border: 1px solid #78909c;
+                        padding: 0px 3px; text-align: left; border-radius: 2px;
+                        cursor: pointer; font-size: clamp(0.4rem, 0.85vw, 0.58rem); line-height: 0.95;">
+                        2. Bonjour Monsieur, j'ai le mot de passe.
+                    </button>
+                    <button class="dialog-choice-btn" onclick="handleOgreChoice(3)" style="
+                        background: #37474f; color: #fff; border: 1px solid #78909c;
+                        padding: 0px 3px; text-align: left; border-radius: 2px;
+                        cursor: pointer; font-size: clamp(0.4rem, 0.85vw, 0.58rem); line-height: 0.95;">
+                        3. On va te bouffer.
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barre d'infos (Action log / HUD) -->
+    <div class="w-full mt-3 p-3 bg-purple-950/90 border-2 border-purple-800 rounded-md text-purple-200 text-xs md:text-sm text-center shadow-lg min-h-[55px] flex flex-col md:flex-row items-center justify-between gap-2">
+        <span id="actionLog" class="flex-1 text-center">Niveau 1 : Cliquez sur la plateforme pour déplacer les ogres.</span>
+        <!-- <div id="hudKey" class="hidden text-amber-300 bg-amber-950/80 px-3 py-1 rounded border border-amber-500/50 text-[10px] md:text-xs flex items-center gap-1">
+        //    <span id="hudItemLabel">🥬 CÉLERI :</span> <span id="keyStatus">NON POSSÉDÉE</span>
+        </div> -->
+    </div>
+</main>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const V_WIDTH = 960;
+        const V_HEIGHT = 540;
+        const UNIT_PIXELS = 72; 
+        const OGRE_HEIGHT = 80;
+
+        let currentLevel = 1;
+
+        // --- LEVEL 1 PARAMETERS ---
+        const L1_X_START = (V_WIDTH - (13 * UNIT_PIXELS)) / 2;
+        const L1_PLAT1_UNITS = 8;
+        const L1_PLAT1_START_UNIT = 3; 
+        const L1_PLAT1_Y = 220;
+        const L1_LADDER_UNIT_X = 9;
+        const L1_LADDER_HEIGHT_UNITS = 6.5;
+        const L1_PLAT2_UNITS = 13;
+        const L1_PLAT2_Y = L1_PLAT1_Y + (L1_LADDER_HEIGHT_UNITS * UNIT_PIXELS);
+        const L1_VINE_UNIT_X = 1;
+        const L1_VINE_HEIGHT_UNITS = 13.0;
+        const L1_PLAT3_UNITS = 13;
+        const L1_PLAT3_Y = L1_PLAT2_Y - (L1_VINE_HEIGHT_UNITS * UNIT_PIXELS);
+        const L1_DOOR3_UNIT_X = 11;
+
+        // --- LEVEL 2 PARAMETERS ---
+        const L2_PLAT1_UNITS = 13;
+        const L2_PLAT1_X_START = (V_WIDTH - (L2_PLAT1_UNITS * UNIT_PIXELS)) / 2;
+        const L2_PLAT1_Y = 160;
+        const L2_LADDER_UNIT_X = 1;
+        const L2_HALF_LADDER_UNITS = 6.5;
+        const L2_PLAT2_UNITS = 13;
+        const L2_PLAT2_Y = L2_PLAT1_Y + (L2_HALF_LADDER_UNITS * UNIT_PIXELS);
+        const L2_KEY_UNIT_X = 11;
+        const L2_PLAT3_UNITS = 13;
+        const L2_PLAT3_Y = L2_PLAT2_Y + (L2_HALF_LADDER_UNITS * UNIT_PIXELS);
+        const L2_DOOR3_UNIT_X = 11;
+
+        // --- LEVEL 3 PARAMETERS ---
+        const L3_X_START = (V_WIDTH - (15 * UNIT_PIXELS)) / 2;
+        const L3_PLAT1_UNITS = 3;
+        const L3_PLAT1_START_UNIT = 0;
+        const L3_PLAT1_Y = 1100;
+        const L3_VINE1_UNIT_X = 0;
+        const L3_VINE_HEIGHT_UNITS = 13.0;
+        const L3_PLAT2_UNITS = 3;
+        const L3_PLAT2_START_UNIT = 0;
+        const L3_PLAT2_Y = L3_PLAT1_Y - (L3_VINE_HEIGHT_UNITS * UNIT_PIXELS);
+        const L3_PLAT3_UNITS = 3;
+        const L3_PLAT3_START_UNIT = 12;
+        const L3_PLAT3_Y = L3_PLAT1_Y;
+        const L3_VINE2_UNIT_X = 14;
+        const L3_PLAT4_UNITS = 3;
+        const L3_PLAT4_START_UNIT = 12;
+        const L3_PLAT4_Y = L3_PLAT2_Y;
+        const L3_DOOR_UNIT_X = 12;
+
+        // --- LEVEL 4 PARAMETERS ---
+        const L4_X_START = (V_WIDTH - (13 * UNIT_PIXELS)) / 2;
+        const L4_PLAT1_UNITS = 3;
+        const L4_PLAT1_START_UNIT = 5;
+        const L4_PLAT1_Y = 180;
+        const L4_LADDER_UNIT_X = 6;
+        const L4_LADDER_HEIGHT_UNITS = 6.5;
+        const L4_PLAT2_UNITS = 3;
+        const L4_PLAT2_START_UNIT = 5;
+        const L4_PLAT2_Y = L4_PLAT1_Y + (L4_LADDER_HEIGHT_UNITS * UNIT_PIXELS);
+        const L4_DOOR_UNIT_X = 6;
+
+        // --- LEVEL 5 PARAMETERS ---
+        const L5_PLAT1_UNITS = 13;
+        const L5_PLAT1_X_START = (V_WIDTH - (L5_PLAT1_UNITS * UNIT_PIXELS)) / 2;
+        const L5_PLAT1_Y = 1100; // Bottom platform
+        const L5_VINE_UNIT_X = 1;
+        const L5_HALF_VINE_UNITS = 6.5;
+        const L5_PLAT2_UNITS = 13;
+        const L5_PLAT2_Y = L5_PLAT1_Y - (L5_HALF_VINE_UNITS * UNIT_PIXELS); // Middle platform (going UP)
+        const L5_TURNIP_UNIT_X = 11;
+        const L5_PLAT3_UNITS = 13;
+        const L5_PLAT3_Y = L5_PLAT2_Y - (L5_HALF_VINE_UNITS * UNIT_PIXELS); // Top platform
+        const L5_GUARD_UNIT_X = 11;
+        const encodedExpectedPassword = "WjhPcGJtbGw=";
+        const encodedPostfaceHTML = "UEdScGRpQmpiR0Z6Y3owaWNISmxabUZqWlMxamIyNTBZV2x1WlhJaUlITjBlV3hsUFNKdFlYZ3RkMmxrZEdnNklEWXdNSEI0T3lCM2FXUjBhRG9nT1RBbE95QmlZV05yWjNKdmRXNWtPaUFqTWpJeU95QmliM0prWlhJNklEUndlQ0J6YjJ4cFpDQWpabVppTnpSa095QmliM0prWlhJdGNtRmthWFZ6T2lBeE1uQjRPeUJ3WVdSa2FXNW5PaUF6TUhCNE95QjBaWGgwTFdGc2FXZHVPaUJqWlc1MFpYSTdJR1p2Ym5RdFptRnRhV3g1T2lCellXNXpMWE5sY21sbU95QmpiMnh2Y2pvZ0kyWm1aanNnWW05NExYTm9ZV1J2ZHpvZ01DQXhNSEI0SURJMWNIZ2djbWRpWVNnd0xEQXNNQ3d3TGpVcE95SStDZ284YURJZ1kyeGhjM005SW5CeVpXWmhZMlV0ZEdsMGJHVWlJSE4wZVd4bFBTSnRZWEpuYVc0dGRHOXdPaUF3T3lCamIyeHZjam9nSTJabVkyRXlPRHNnWm05dWRDMXphWHBsT2lBeExqVmxiVHNnWm05dWRDMTNaV2xuYUhRNklHSnZiR1E3SWo1TVpTQjJiM2xoWjJVZ2RHOTFZMmhsSU1PZ0lITmhJR1pwYmp3dmFESStDZ284WkdsMklHTnNZWE56UFNKd2NtVm1ZV05sTFdKdlpIa2lJSE4wZVd4bFBTSm1iMjUwTFhOcGVtVTZJREV1TVdWdE95QnNhVzVsTFdobGFXZG9kRG9nTVM0Mk95QmpiMnh2Y2pvZ0kyVXdaVEJsTURzZ2JXRnlaMmx1T2lBeU1IQjRJREE3SWo0S0NqeHdQa3hsY3lCMGNtOXBjeUE4ZFQ0OFlqNUJUVWxUSUU5SFVrVlRQQzlpUGp3dmRUNGdiMjUwSUhWMGFXeHBjOE9wSUd4bGRYSnpJR052YlhERHFYUmxibU5sY3lBb1BHSStSMFZPU1VVOEwySStMQ0E4WWo1RFNFRlNUVVU4TDJJK0lHVjBJRHhpUGtGVlJFRkRSVHd2WWo0cElIQnZkWElnYkdWMWNuSmxjaUJzWlNBOGRUNDhZajVIUVZKRVNVVk9QQzlpUGlCa1pTQThZajVNVlR3dllqNDhMM1UrTGp3dmNENEtDanh3UGtsc2N5QndiM1Z5Y205dWRDQnNaWE1nY0dGeWRHRm5aWElnWVhabFl5QnNaU0J1YjNWMlpXRjFMVzdEcVNCaGFXNXphU0J4ZFdVZ2JHVjFjbk1nY0hKdmRtbHphVzl1Y3lBNklEeDFQanhpUGtKQlZFOU9QQzlpUGlCa1pTQThZajVEUlV4RlVrazhMMkkrUEM5MVBpd2dQR0krVUVGSlRsTThMMkkrSUdWMElEeGlQazVCVmtWVVBDOWlQaWt1UEM5d1Bnb0tQSEFnYzNSNWJHVTlJbU52Ykc5eU9pQWpPREZqTnpnME95Qm1iMjUwTFhkbGFXZG9kRG9nWW05c1pEc2diV0Z5WjJsdUxYUnZjRG9nTWpWd2VEc2lQa1JoYm5NZ1kyVjBJSFZ1YVhabGNuTWdjR0Z5WVd4c3c2aHNaU3dnZEc5MWN5QmpaWE1ndzZsc3c2bHRaVzUwY3lCdmJuUWdZMjl0YldVZ2NHOXBiblFnWTI5dGJYVnVJR3hsSUhCeXc2bHViMjBnWkdVZ1kyVWdZMmhsY2lCbGJtWmhiblF1SUZGMVpXd2daWE4wTFhRdGFXd2dQenhpY2k4K0lFVnVkSEpsSUhSaElITERxWEJ2Ym5ObElITjFjaUJzWlNCemFYUmxJR1JsSUVOb2IyTnZZMlZ5ZG04dVBDOXdQZ29LUEM5a2FYWStDZ284WW5WMGRHOXVJR05zWVhOelBTSmthV0ZzYjJjdFkyaHZhV05sTFdKMGJpSWdiMjVqYkdsamF6MGliRzlqWVhScGIyNHVjbVZzYjJGa0tDa2lJSE4wZVd4bFBTSmlZV05yWjNKdmRXNWtPaUFqWm1aaU56UmtPeUJqYjJ4dmNqb2dJekV4TVRzZ1ltOXlaR1Z5T2lCdWIyNWxPeUJ3WVdSa2FXNW5PaUF4TW5CNElESTRjSGc3SUdadmJuUXRjMmw2WlRvZ01TNHlaVzA3SUdadmJuUXRkMlZwWjJoME9pQmliMnhrT3lCaWIzSmtaWEl0Y21Ga2FYVnpPaUEyY0hnN0lHTjFjbk52Y2pvZ2NHOXBiblJsY2pzZ2RISmhibk5wZEdsdmJqb2dkSEpoYm5ObWIzSnRJREF1TVhNc0lHSmhZMnRuY205MWJtUWdNQzR5Y3pzZ2JXRnlaMmx1TFhSdmNEb2dNVEJ3ZURzaVBsSmxZMjl0YldWdVkyVnlJR3hsSUdwbGRUd3ZZblYwZEc5dVBqd3ZaR2wyUGc9PQ==";
+        const niveauxDebloques = [true, false, false, false, false];
+
+        let currentLevelState = 'PLATFORM_1';
+        let ogre1X = 3;
+        let ogre2X = 4;
+        let ogre3X = 5;
+        let ogre1Y = L1_PLAT1_Y;
+        let ogre2Y = L1_PLAT1_Y;
+        let ogre3Y = L1_PLAT1_Y;
+
+        let targetX = 0;
+        let targetY = 0;
+
+        let isMoving = false;
+        let moveDirectionX = 0; // -1 = Left, 1 = Right
+        let moveDirectionY = 0; // -1 = Up, 1 = Down
+
+        let hasKey = false;
+        let hasTurnip = false;
+        let isFalling = false;
+        let fallOffsetY = 0;
+        let fallVelocityY = 0;
+        let hasWon = false;
+        let animFrameCounter = 0;
+
+        let isEnteringDoor = false;
+        let hasBread = false;
+        const BREAD_UNITS = [4, 7, 10]
+        let collectedBreads = [false, false, false];
+        let doorStep = 0;
+        let doorTimer = 0;
+        let ogre1Visible = true;
+        let ogre2Visible = true;
+        let ogre3Visible = true;
+        let isRedOgreSoloMoving = false;
+        let isGreenOgreSoloMoving = false;
+        let isBrownOgreSoloMoving = false;
+        let redOgreEscaped = false;
+        let pwdGiven = false;
+        let comptBG = 0;
+        let comptOgre =0;
+        let savedChoiceData = [];
+        let previousDialogText = ""; 
+
+        let cameraX = 0;
+        let cameraY = 0;
+
+        const actionLog = document.getElementById('actionLog');
+        //const hudKey = document.getElementById('hudKey');
+        const hudItemLabel = document.getElementById('hudItemLabel');
+        const keyStatus = document.getElementById('keyStatus');
+
+        function updateLevelButtons() {
+        niveauxDebloques.forEach((debloque, index) => {
+            const btn = document.getElementById(`btnLevel${index + 1}`);
+            if (!btn) return;
+
+            // Activation / Désactivation HTML
+            btn.disabled = !debloque;
+
+            // Gestion du style visuel si bloqué
+            if (debloque) {
+            btn.classList.remove('opacity-40', 'cursor-not-allowed');
+            btn.classList.add('cursor-pointer');
+            } else {
+            btn.classList.add('opacity-40', 'cursor-not-allowed');
+            btn.classList.remove('cursor-pointer');
+            }
+        });
+        }
+
+        updateLevelButtons();
+
+        function completeLevel(levelNum) {
+            if (levelNum < niveauxDebloques.length) {
+                niveauxDebloques[levelNum] = true; // levelNum correspond à l'index du niveau suivant
+                updateLevelButtons();
+            }
+        }
+        function getDoorUnitX(level) {
+            if (level === 1) return L1_DOOR3_UNIT_X;
+            if (level === 2) return L2_DOOR3_UNIT_X;
+            if (level === 3) return L3_DOOR_UNIT_X;
+            if (level === 4) return L4_DOOR_UNIT_X;
+            return 11;
+        }
+
+        function getDoorY(level) {
+            if (level === 1) return L1_PLAT3_Y;
+            if (level === 2) return L2_PLAT3_Y;
+            if (level === 3) return L3_PLAT4_Y;
+            if (level === 4) return L4_PLAT2_Y;
+            return 0;
+        }
+
+        function decodeBase64UTF8(str) {
+            const binaryString = atob(str);
+            const bytes = Uint8Array.from(binaryString, char => char.charCodeAt(0));
+            return new TextDecoder().decode(bytes);
+        }
+
+        function handleAttackOgre() {
+            updateDialogText("Le gardien est bien entraîné et est plus fort que vous. Il vous renvoie au début du niveau.", true);
+            
+            // On vide les boutons pendant le message de fin
+            const choicesContainer = document.getElementById('dialog-choices');
+            if (choicesContainer) choicesContainer.innerHTML = '';
+
+            // Relance le jeu après 3,5 secondes
+            setTimeout(() => {
+                closeDialogue();
+                switchLevel(5);
+            }, 3500);
+        }
+
+        function showViolenceWarning() {
+            // Sauvegarde du texte actuel en retirant les guillemets superflus si nécessaire
+            const textElement = document.getElementById('dialog-text');
+            if (textElement) {
+                textElement.style.fontStyle = 'normal'; 
+                textElement.style.fontWeight = 'bold'; 
+                previousDialogText = textElement.innerHTML.replace(/^"|"$/g, '').trim();
+            }
+            const titleElement = document.getElementById('dialog-speaker');
+            if (titleElement) {
+                titleElement.textContent = '';
+            }
+            updateDialogText("Sur Chococervo, nous ne prônons pas la violence. Une autre option est certainement meilleure.<br/><b>Etes-vous certain·e de vouloir continuer ?</b>",  true);
+
+            const choicesContainer = document.getElementById('dialog-choices');
+            if (!choicesContainer) return;
+
+            choicesContainer.innerHTML = `
+                <button class="dialog-choice-btn" onclick="handleAttackOgre()" style="
+                    background: #37474f; color: #fff; border: 1px solid #78909c; padding: 6px 10px;
+                    text-align: left; border-radius: 5px; cursor: pointer; font-size: 0.9em; width: 100%; margin-bottom: 5px;
+                ">1. Oui. Bouffons-le !</button>
+                
+                <button class="dialog-choice-btn" onclick="cancelAttackOgre()" style="
+                    background: #37474f; color: #fff; border: 1px solid #78909c; padding: 6px 10px;
+                    text-align: left; border-radius: 5px; cursor: pointer; font-size: 0.9em; width: 100%;
+                ">2. Annuler</button>
+            `;
+        }
+
+        // 3. Option "Annuler" -> Restaure exactement le texte précédent sans guillemets
+        function cancelAttackOgre() {
+
+            const titleElement = document.getElementById('dialog-speaker');
+            if (titleElement) {
+                titleElement.style.display = 'block';
+                titleElement.textContent = "Gardien :";
+            }
+            if (previousDialogText) {
+                // Nettoie tout guillemet éventuel au début ou à la fin du texte sauvegardé
+                const cleanText = previousDialogText.replace(/^"|"$/g, '').trim();
+                updateDialogText(cleanText);
+
+            }
+            const textElement = document.getElementById('dialog-text');
+            if (textElement) {
+                textElement.style.fontStyle = 'italic'; 
+                textElement.style.fontWeight = 'normal'; 
+            }
+            if (comptOgre === 2)
+            {
+                updateDialogText("Il va falloir rechanger le mot de passe, et puis faire des courses aussi, dire au prince de Lu que je suis fatigué de ces histoires... Oh ! Une mouche !");
+            }           
+            // Restaure les boutons dans l'état exact où ils étaient
+            restoreSavedChoices();
+        }
+        function showPostface() {
+            let postfaceOverlay = document.getElementById('postface-overlay');
+
+            if (!postfaceOverlay) {
+                postfaceOverlay = document.createElement('div');
+                postfaceOverlay.id = 'postface-overlay';
+                postfaceOverlay.className = 'overlay-screen';
+                postfaceOverlay.style.cssText = `
+                    position: fixed;
+                    top: 0; left: 0; width: 100%; height: 100%;
+                    background: rgba(0, 0, 0, 0.85);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 9999;
+                `;
+                document.body.appendChild(postfaceOverlay);
+            }
+
+            postfaceOverlay.innerHTML = decodeBase64UTF8(decodeBase64UTF8(encodedPostfaceHTML));
+            postfaceOverlay.style.display = 'flex';
+        }
+
+        // Fonction universelle pour afficher n'importe quel dialogue
+        function showDialogue(speaker, text, choices = []) {
+            const overlay = document.getElementById('dialog-overlay');
+            const speakerEl = document.getElementById('dialog-speaker');
+            const textEl = document.getElementById('dialog-text');
+            const choicesEl = document.getElementById('dialog-choices');
+
+            if (!overlay || !speakerEl || !textEl || !choicesEl) return;
+
+            // 1. Mise à jour du locuteur et du texte
+            speakerEl.textContent = speaker + " :";
+            textEl.textContent = '"' + text + '"';
+
+            // 2. Nettoyage et génération des choix
+            choicesEl.innerHTML = '';
+            
+            choices.forEach((choice, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'dialog-choice-btn';
+                btn.textContent = (index + 1) + ". " + choice.label;
+                btn.style.cssText = "background: #37474f; color: #fff; border: 1px solid #78909c; padding: 6px 10px; text-align: left; border-radius: 5px; cursor: pointer; font-size: 0.9em;";
+                
+                // Action au clic
+                btn.onclick = () => {
+                    if (typeof choice.callback === 'function') {
+                        choice.callback();
+                    }
+                };
+                
+                choicesEl.appendChild(btn);
+            });
+
+            // 3. Affichage
+            overlay.style.display = 'flex';
+            dialogTriggered = true;
+        }
+        function updateDialogText(text, isSystemMessage = false) {
+            const textElement = document.getElementById('dialog-text');
+            if (!textElement) return;
+
+            if (isSystemMessage) {
+                // Pour les messages système : pas de guillemets du tout
+                // On nettoie aussi d'éventuels guillemets résiduels transmis dans la chaîne
+                const cleanText = text.replace(/^"|"$/g, '').trim();
+                textElement.innerHTML = cleanText;
+            } else {
+                // Pour les dialogues normaux des personnages : avec guillemets
+                const cleanText = text.replace(/^"|"$/g, '').trim();
+                textElement.innerHTML = `"${cleanText}"`;
+            }
+        }
+        function saveCurrentChoices() {
+            const choicesContainer = document.getElementById('dialog-choices');
+            if (!choicesContainer) return;
+
+            savedChoiceData = [];
+            Array.from(choicesContainer.children).forEach((btn) => {
+                savedChoiceData.push({
+                    text: btn.textContent,
+                    clickCallback: btn.onclick
+                });
+            });
+        }
+        // indexBouton commence à 1 (1 = premier bouton, 2 = deuxième, etc.)
+        function updateDialogChoice(indexBouton, nouveauTexte, nouvelleAction) {
+            const choicesContainer = document.getElementById('dialog-choices');
+            if (!choicesContainer) return;
+
+            // Récupère le bouton correspondant (index - 1 car les tableaux commencent à 0)
+            const btn = choicesContainer.children[indexBouton - 1];
+            
+            if (btn) {
+                // 1. Modifier le texte du bouton
+                btn.textContent = indexBouton + ". " + nouveauTexte;
+                
+                // 2. Modifier la fonction déclenchée au clic (si fournie)
+                if (typeof nouvelleAction === 'function') {
+                    btn.onclick = () => {
+                        nouvelleAction();
+                    };
+                }
+            }
+        }
+        // Fonction pour ignorer les majuscules et les accents
+        function normalizeString(str) {
+            return str
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "");
+        }
+
+
+        // Affiche le formulaire de saisie en sauvegardant les événements des boutons
+        function showPasswordInput() {
+            const choicesContainer = document.getElementById('dialog-choices');
+            if (!choicesContainer) return;
+
+            // 1. Sauvegarde des données et des événements onclick réels
+            savedChoiceData = [];
+            Array.from(choicesContainer.children).forEach((btn) => {
+                savedChoiceData.push({
+                    text: btn.textContent,
+                    clickCallback: btn.onclick
+                });
+            });
+
+            // 2. Mise à jour du texte du gardien
+            updateDialogText("Veuillez entrer le mot de passe :");
+
+            // 3. Injection du formulaire
+            choicesContainer.innerHTML = `
+                <form onsubmit="checkPassword(event)" style="display: flex; gap: 8px; width: 100%;">
+                    <input type="text" id="password-input" placeholder="Entrez le mot de passe..." autofocus style="
+                        flex: 1;
+                        padding: 6px 10px;
+                        border-radius: 5px;
+                        border: 1px solid #78909c;
+                        background: #1c272c;
+                        color: #fff;
+                        font-size: 0.9em;
+                        outline: none;
+                    " />
+                    <button type="submit" style="
+                        background: #37474f;
+                        color: #fff;
+                        border: 1px solid #78909c;
+                        padding: 6px 12px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 0.9em;
+                    ">Valider</button>
+                </form>
+            `;
+
+            setTimeout(() => {
+                const input = document.getElementById('password-input');
+                if (input) input.focus();
+            }, 50);
+        }
+
+        // Vérification du mot de passe entré
+        function checkPassword(event) {
+            event.preventDefault();
+
+            const input = document.getElementById('password-input');
+            if (!input) return;
+
+            const userInput = normalizeString(input.value.trim());
+            const expectedPassword = normalizeString(decodeBase64UTF8(decodeBase64UTF8(encodedExpectedPassword)));
+
+            if (userInput === expectedPassword) {
+
+
+                isBrownOgreSoloMoving = true;
+                pwdGiven = true; 
+                targetX = 12;
+                moveDirectionX = (targetX > ogre1X) ? 1 : -1;
+                isMoving = true;
+                updateDialogText("Toi, tu as l'air plus malin que tes copains, il faut bel et bien cette compétence pour avoir trouvé le mot de passe. Tu peux passer, mais seul.");
+                restoreSavedChoices();
+                removeChoiceByText("mot de passe");
+                comptOgre++;
+            } else {
+                updateDialogText("Mot de passe incorrect.");
+                restoreSavedChoices();
+            }
+        }
+        function removeChoiceByText(searchText) {
+            const choicesContainer = document.getElementById('dialog-choices');
+            if (!choicesContainer) return;
+
+            // 1. Chercher et supprimer le bouton contenant le texte recherché
+            const buttons = Array.from(choicesContainer.children);
+            buttons.forEach((btn) => {
+                if (btn.textContent.toLowerCase().includes(searchText.toLowerCase())) {
+                    btn.remove();
+                }
+            });
+
+            // 2. Mettre à jour la numérotation des boutons restants
+            const remainingButtons = Array.from(choicesContainer.children);
+            remainingButtons.forEach((btn, index) => {
+                // Retire l'ancien numéro (ex: "2. Mon texte" -> "Mon texte")
+                const cleanText = btn.textContent.replace(/^\d+\.\s*/, '');
+                
+                // Applique le nouveau numéro propre (1., 2., etc.)
+                btn.textContent = (index + 1) + ". " + cleanText;
+            });
+        }
+        // Restaure les boutons ET réattache leurs fonctions d'origine
+        function restoreSavedChoices() {
+            const choicesContainer = document.getElementById('dialog-choices');
+            if (!choicesContainer || savedChoiceData.length === 0) return;
+
+            choicesContainer.innerHTML = '';
+
+            savedChoiceData.forEach((item) => {
+                const btn = document.createElement('button');
+                btn.className = 'dialog-choice-btn';
+                btn.textContent = item.text;
+                btn.style.cssText = "background: #37474f; color: #fff; border: 1px solid #78909c; padding: 6px 10px; text-align: left; border-radius: 5px; cursor: pointer; font-size: 0.9em;";
+                
+                // Réattache l'événement JS sauvegardé
+                btn.onclick = item.clickCallback;
+
+                choicesContainer.appendChild(btn);
+            });
+        }
+
+        // Fonction pour fermer la boîte
+        function closeDialogue() {
+            const overlay = document.getElementById('dialog-overlay');
+            if (overlay) overlay.style.display = 'none';
+            dialogTriggered = false;
+        }
+        function startDoorSequence() {
+            isEnteringDoor = true;
+            isMoving = false;
+            doorStep = 1;
+            doorTimer = 0;
+            setActionMessage("Les ogres entrent dans le portail !");
+        }
+
+        function updateDoorSequence() {
+            const doorX = getDoorUnitX(currentLevel);
+            const doorY = getDoorY(currentLevel);
+
+            if (doorStep === 1) {
+                doorTimer++;
+                if (doorTimer >= 20) {
+                    ogre1Visible = false;
+                    doorStep = 2;
+                    doorTimer = 0;
+                    //setActionMessage("L'ogre 2 s'avance vers le portail...");
+                }
+            } else if (doorStep === 2) {
+                if (currentLevel === 4) {
+                    ogre2Y += 4.5;
+                    if (ogre2Y >= doorY) {
+                        ogre2Y = doorY;
+                        ogre2X = doorX;
+                    }
+                } else {
+                    if (ogre2X < doorX) ogre2X = Math.min(doorX, ogre2X + 0.08);
+                    else if (ogre2X > doorX) ogre2X = Math.max(doorX, ogre2X - 0.08);
+                    ogre2Y = doorY;
+                }
+
+                if (Math.abs(ogre2X - doorX) < 0.05 && Math.abs(ogre2Y - doorY) < 1) {
+                    ogre2X = doorX;
+                    ogre2Y = doorY;
+                    doorTimer++;
+                    if (doorTimer >= 15) {
+                        ogre2Visible = false;
+                        doorStep = 3;
+                        doorTimer = 0;
+                      //  setActionMessage("L'ogre 3 s'avance vers le portail...");
+                    }
+                }
+            } else if (doorStep === 3) {
+                if (currentLevel === 4) {
+                    ogre3Y += 4.5;
+                    if (ogre3Y >= doorY) {
+                        ogre3Y = doorY;
+                        ogre3X = doorX;
+                    }
+                } else {
+                    if (ogre3X < doorX) ogre3X = Math.min(doorX, ogre3X + 0.08);
+                    else if (ogre3X > doorX) ogre3X = Math.max(doorX, ogre3X - 0.08);
+                    ogre3Y = doorY;
+                }
+
+                if (Math.abs(ogre3X - doorX) < 0.05 && Math.abs(ogre3Y - doorY) < 1) {
+                    ogre3X = doorX;
+                    ogre3Y = doorY;
+                    doorTimer++;
+                    if (doorTimer >= 15) {
+                        ogre3Visible = false;
+                        doorStep = 4;
+                        doorTimer = 0;
+                       // setActionMessage("Tous les ogres ont franchi le portail ! Passage au niveau suivant...");
+                    }
+                }
+            } else if (doorStep === 4) {
+                doorTimer++;
+                if (doorTimer >= 30) {
+                    if (currentLevel < 5) {
+                        switchLevel(currentLevel + 1);
+                    }
+                }
+            }
+        }
+
+        function triggerFall() {
+            if (!isFalling) {
+                isFalling = true;
+                fallOffsetY = 0;
+                fallVelocityY = 2;
+                setActionMessage("Oups ! Les ogres tombent dans le vide !");
+            }
+        }
+
+        function setActionMessage(msg) {
+            if (actionLog) actionLog.textContent = msg;
+        }
+
+        function getL3HeightForUnit(u) {
+            if (u <= 2) return L3_PLAT2_Y;
+            if (u >= 12) return L3_PLAT3_Y;
+            return L3_PLAT2_Y + ((u - 2) / (12 - 2)) * (L3_PLAT3_Y - L3_PLAT2_Y);
+        }
+
+        function drawPixelMatrix(ctx, matrix, colorMap, startX, startY, pixelSize, flipX = false) {
+            ctx.save();
+            const rows = matrix.length;
+            const cols = matrix[0].length;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const char = matrix[r][c];
+                    if (char !== ' ') {
+                        const color = colorMap[char];
+                        if (color) {
+                            ctx.fillStyle = color;
+                            const drawC = flipX ? (cols - 1 - c) : c;
+                            ctx.fillRect(
+                                Math.floor(startX + drawC * pixelSize),
+                                Math.floor(startY + r * pixelSize),
+                                Math.ceil(pixelSize),
+                                Math.ceil(pixelSize)
+                            );
+                        }
+                    }
+                }
+            }
+            ctx.restore();
+        }
+        const brownOgreColors = {
+            'h': '#795548', // Peau marron
+            'b': '#3e2723', // Sourcils marron foncé
+            'E': '#ffffff', // Blanc de l'œil
+            'p': '#1a237e', // Pupille bleu nuit (regard attentif)
+            'W': '#e0e0e0', // Dents / Bouche
+            'B': '#5d4037', // Tunique masculine marron foncé
+            'S': '#795548', // Épaules / Bras
+            's': '#f59e0b', // Boucle de ceinture dorée
+            'L': '#3e2723', // Ceinture en cuir foncé
+            'f': '#795548', // Jambes
+            'F': '#33691e'  // Botte / Pieds
+        };
+
+        const brownOgreMatrix = [
+            "     hhhhhh     ", // Tête dégagée
+            "    hhhhhhhh    ", 
+            "   hhbbhhbbhh   ", // Sourcils relevés (b) pour l'air réfléchi
+            "   hhEphhEphh   ", // Yeux blancs (E) avec pupilles vives (p)
+            "   hhhhhhhhhh   ", 
+            "    hhWWWWhh    ", // Dents / Moustache ou bouche neutre
+            "  SSSSBBBBBBSS  ", // Épaules & Tunique masculine marron (B)
+            " S  SBBBBBBBB S ", // Gros ventre conservé
+            " S  SBBBBBBBB S ",
+            " S  sLLLLLLLLs S", // Ceinture avec boucle
+            "  s sLLLLLLLLs  ", 
+            "   sLLLLLLLLLLs ", // Bas de la tunique
+            "    LLLLLLLLLL  ",
+            "   ffff  ffff   ", // Jambes
+            "   ffff  ffff   ", 
+            "   ffff  ffff   ", 
+            "  FFFFF  FFFFF  "  // Pieds
+        ];
+
+      
+        const greyOgreColors = {
+            'g': '#7cb342', // Vert Shrek
+            'o': '#558b2f', // Vert foncé pour les oreilles trompettes
+            'E': '#795548', // Yeux marron
+            'W': '#ffffff', 'G': '#8bc34a', 's': '#33691e',
+            'S': '#558b2f', 'L': '#d7ccc8', 'f': '#7cb342', 'F': '#33691e'
+        };
+
+        const greyOgreMatrix = [
+            " o   gggggg   o ", // Oreilles de Shrek qui dépassent sur les côtés !
+            "oo  gggggggg  oo",
+            "   gggggggggg   ",
+            "   ggEEggEEgg   ",
+            "   gggggggggg   ",
+            "    ggWWgggg    ",
+            "   SSGGGGGGSS   ",
+            "  S SGGGGGGs S  ",
+            "  S SGGGGGGs S  ",
+            "   sLLLLLLLLs   ",
+            "   sLLLLLLLLs   ",
+            "   sLLLLLLLLs   ",
+            "    LLLLLLLL    ",
+            "   gggggggggg   ",
+            "   gggggggggg   ",
+            "   gggg  gggg   ",
+            "   gggg  gggg   ",
+            "  GGGGG  GGGGG  "
+        ];
+
+        
+        const redOgreColors = {
+            'r': '#e53935', 'E': '#fff59d', 'p': '#111111', // 'p' = Pupille noire intense
+            'W': '#e0e0e0', 'R': '#ef5350', 's': '#b71c1c', 
+            'S': '#c62828', 'L': '#8d6e63', 'r_leg': '#e53935',
+            'R_foot': '#b71c1c',
+            'b': '#4e342e', // Bois sombre du grand bâton
+            'm': '#00e5ff', // Cœur du cristal magique (cyan fluo)
+            'M': '#b2ebf2'  // Aura lumineuse du cristal
+        };
+
+        const redOgreMatrix = [
+            "     rrrrrr     M", // Halo magique
+            "    rrrrrrrr    m", // Cristal magique
+            "   rrrrrrrrrr   b", // Haut du bâton
+            "   rrEprrEprr   b", // Yeux jaunes (E) avec pupilles noires (p)
+            "   rrrrrrrrrr   b",
+            "    rrWWrrrr    b",
+            "   SSRRRRRRSS   b", // Le bâton traverse sa main droite
+            "  S SRRRRRRs S  b",
+            "  S SRRRRRRs S  b",
+            "   sLLLLLLLLs   b",
+            "   sLLLLLLLLs   b",
+            "   sLLLLLLLLs   b",
+            "    LLLLLLLL    b",
+            "   rrrrrrrrrr   b",
+            "   rrrrrrrrrr   b",
+            "   rrrr  rrrr   b",
+            "   rrrr  rrrr   b",
+            "  RRRRR  RRRRR  b"  // Le bâton touche le sol
+        ];
+
+        const guardMatrix = [
+            "       XXXX       ", // Sommet du casque
+            "      XXXXXX      ", 
+            "      XXXXXX  L   ", // L = Pointe de lance
+            "      XeeeeX  L   ", // Visière rouge
+            "      XXXXXX LLL  ", 
+            "     AAAAAAAA L   ", // Spallières imposantes
+            "    AAAAAAAAAA L  ", // Épaules très larges
+            "    AAAAAAAAAA L  ",
+            "    AAAAAAAAAA L  ",
+            "    AAAAAAAAAA L  ", // Buste massif
+            "     AAAAAAAA  L  ",
+            "     AAccccAA  L  ", // Ceinture
+            "     AAccccAA  L  ",
+            "     AAAAAAAA  l  ", // Jupe d'armure / Plastron bas
+            "     AAAAAAAA  l  ",
+            "     AAAAAAAA  l  ",
+            "     AAA  AAA  l  ", // Cuisses blindées
+            "     AAA  AAA  l  ",
+            "     AAA  AAA  l  ",
+            "     AAA  AAA  l  ", // Jambes bien proportionnées
+            "     AAA  AAA  l  ",
+            "     AAA  AAA  l  ",
+            "    AAAA  AAAA l  ", // Bottes lourdes
+            "    AAAA  AAAA l  ",
+            "    AAAA  AAAA l  "
+        ];
+
+        const guardColors = {
+            'X': '#78909c', // Casque (Acier sombre)
+            'e': '#ff1744', // Visère lumineuse (Rouge)
+            'A': '#b0bec5', // Armure plates (Acier clair)
+            'c': '#5d4037', // Ceinture cuir
+            'L': '#cfd8dc', // Fer de la lance (Acier brillant)
+            'l': '#8d6e63'  // Manche de la lance (Bois)
+        };
+
+        function drawBackground() {
+            if (currentLevel === 1) {
+                // 1. Ciel très lumineux (Jaune chaud / Orange clair)
+                const skyGrad = ctx.createLinearGradient(0, L1_PLAT3_Y - 300, 0, L1_PLAT3_Y + 80);
+                skyGrad.addColorStop(0, '#ffa726');   // Orange clair lumineux
+                skyGrad.addColorStop(0.5, '#ffcc80'); // Pêche / sable très doux
+                skyGrad.addColorStop(1, '#ffe082');   // Jaune doré chaud
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(-800, L1_PLAT3_Y - 400, V_WIDTH + 1600, V_HEIGHT + 1200);
+
+                // 2. Dunes et montagnes de grès en arrière-plan
+                ctx.fillStyle = '#fb8c00';
+                ctx.beginPath();
+                ctx.moveTo(-400, L1_PLAT3_Y + 20);
+                ctx.lineTo(-100, L1_PLAT3_Y - 80);
+                ctx.lineTo(200, L1_PLAT3_Y - 20);
+                ctx.lineTo(500, L1_PLAT3_Y - 100);
+                ctx.lineTo(800, L1_PLAT3_Y - 40);
+                ctx.lineTo(1200, L1_PLAT3_Y - 90);
+                ctx.lineTo(1500, L1_PLAT3_Y + 20);
+                ctx.lineTo(1500, L1_PLAT3_Y + 100);
+                ctx.lineTo(-400, L1_PLAT3_Y + 100);
+                ctx.fill();
+                // 3. CACTUS (Posés sur la plateforme haute L1_PLAT1_Y)
+                for (let x = 20; x < V_WIDTH; x += 90) {
+                    const baseY = L1_PLAT3_Y; 
+                    const cactusH = 35 + Math.abs(Math.sin(x * 0.05)) * 12;
+
+                    // Tronc central
+                    ctx.fillStyle = '#2e7d32';
+                    ctx.fillRect(x, baseY - cactusH, 10, cactusH);
+
+                    // Branche de gauche (plus basse)
+                    ctx.fillRect(x - 10, baseY - cactusH + 18, 10, 5);
+                    ctx.fillRect(x - 10, baseY - cactusH + 8, 5, 12);
+
+                    // Branche de droite (plus haute)
+                    ctx.fillRect(x + 10, baseY - cactusH + 10, 10, 5);
+                    ctx.fillRect(x + 15, baseY - cactusH + 2, 5, 10);
+
+                    // Ombrage pour le relief
+                    ctx.fillStyle = '#1b5e20';
+                    ctx.fillRect(x + 7, baseY - cactusH, 3, cactusH);
+                }
+                            // 4. Paroi rocheuse du désert (Tons de grès ocre / sable chaud)
+                const rockGrad = ctx.createLinearGradient(0, L1_PLAT3_Y, 0, L1_PLAT2_Y);
+                rockGrad.addColorStop(0, '#f57c00');   // Orange chaud
+                rockGrad.addColorStop(0.5, '#ffb74d'); // Ocre/Sable doré
+                rockGrad.addColorStop(1, '#e65100');   // Accent orangé
+                ctx.fillStyle = rockGrad;
+                ctx.fillRect(-800, L1_PLAT3_Y + 20, V_WIDTH + 1600, L1_PLAT2_Y - L1_PLAT3_Y);
+
+                // 5. Sol de sable lumineux
+                const sandGrad = ctx.createLinearGradient(0, L1_PLAT2_Y + 20, 0, L1_PLAT2_Y + 400);
+                sandGrad.addColorStop(0, '#ffe082');   // Jaune sable très clair
+                sandGrad.addColorStop(1, '#ffb74d');   // Sable doré
+                ctx.fillStyle = sandGrad;
+                ctx.fillRect(-800, L1_PLAT2_Y + 20, V_WIDTH + 1600, 400);
+            } else if (currentLevel === 2) {
+                const skyGrad = ctx.createLinearGradient(0, L2_PLAT1_Y - 300, 0, L2_PLAT1_Y + 100);
+                skyGrad.addColorStop(0, '#1b0c33');
+                skyGrad.addColorStop(0.5, '#391d61');
+                skyGrad.addColorStop(1, '#5d2b8a');
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(-800, L2_PLAT1_Y - 400, V_WIDTH + 1600, V_HEIGHT + 1400);
+
+                ctx.fillStyle = '#2a1447';
+                ctx.beginPath();
+                ctx.ellipse(100, L2_PLAT1_Y - 120, 120, 30, 0, 0, Math.PI * 2);
+                ctx.ellipse(750, L2_PLAT1_Y - 160, 160, 40, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#e8cbf5';
+                for (let i = 0; i < 40; i++) {
+                    const sx = (i * 73) % (V_WIDTH + 800) - 400;
+                    const sy = L2_PLAT1_Y - 350 + (i * 37) % 280;
+                    const spark = (animFrameCounter + i * 5) % 30 < 15 ? 2 : 3;
+                    ctx.fillRect(sx, sy, spark, spark);
+                }
+
+                const rockGrad = ctx.createLinearGradient(0, L2_PLAT1_Y, 0, L2_PLAT3_Y);
+                rockGrad.addColorStop(0, '#463c59');
+                rockGrad.addColorStop(0.5, '#564a6e');
+                rockGrad.addColorStop(1, '#3c334d');
+                ctx.fillStyle = rockGrad;
+                ctx.fillRect(-800, L2_PLAT1_Y + 20, V_WIDTH + 1600, L2_PLAT3_Y - L2_PLAT1_Y + 40);
+
+                ctx.fillStyle = '#9b5de5';
+                for (let y = L2_PLAT1_Y + 40; y < L2_PLAT3_Y + 50; y += 45) {
+                    const shift = (Math.sin(y * 0.1) * 50);
+                    for (let x = -600; x < V_WIDTH + 800; x += 160) {
+                        ctx.fillRect(x + shift, y, 70, 3);
+                    }
+                }
+
+                const abyssGrad = ctx.createLinearGradient(0, L2_PLAT3_Y + 20, 0, L2_PLAT3_Y + 350);
+                abyssGrad.addColorStop(0, '#31103f');
+                abyssGrad.addColorStop(1, '#13041c');
+                ctx.fillStyle = abyssGrad;
+                ctx.fillRect(-800, L2_PLAT3_Y + 20, V_WIDTH + 1600, 350);
+
+            } else if (currentLevel === 3) {
+                const skyGrad = ctx.createLinearGradient(0, L3_PLAT2_Y - 400, 0, L3_PLAT1_Y + 400);
+                skyGrad.addColorStop(0, '#2b0505');
+                skyGrad.addColorStop(0.4, '#5e1008');
+                skyGrad.addColorStop(0.8, '#a82c0d');
+                skyGrad.addColorStop(1, '#ff5500');
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(-800, L3_PLAT2_Y - 500, V_WIDTH + 1600, L3_PLAT1_Y - L3_PLAT2_Y + 1200);
+
+                ctx.fillStyle = '#ffcc00';
+                for (let i = 0; i < 60; i++) {
+                    const bx = (i * 89 + animFrameCounter * 1.5) % (V_WIDTH + 1200) - 600;
+                    const by = L3_PLAT1_Y + 200 - ((i * 43 + animFrameCounter * 2) % (L3_PLAT1_Y - L3_PLAT2_Y + 600));
+                    const bsize = (i % 3 === 0) ? 3 : 2;
+                    ctx.fillRect(bx, by, bsize, bsize);
+                }
+
+                const lavaGrad = ctx.createLinearGradient(0, L3_PLAT1_Y + 40, 0, L3_PLAT1_Y + 400);
+                lavaGrad.addColorStop(0, '#ffcc00');
+                lavaGrad.addColorStop(0.3, '#ff3300');
+                lavaGrad.addColorStop(1, '#880000');
+                ctx.fillStyle = lavaGrad;
+                ctx.fillRect(-800, L3_PLAT1_Y + 40, V_WIDTH + 1600, 600);
+
+            } else if (currentLevel === 4) {
+                const skyGrad = ctx.createLinearGradient(0, L4_PLAT1_Y - 300, 0, L4_PLAT2_Y + 300);
+                skyGrad.addColorStop(0, '#06131f');
+                skyGrad.addColorStop(0.5, '#102a43');
+                skyGrad.addColorStop(1, '#1d4ed8');
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(-800, L4_PLAT1_Y - 400, V_WIDTH + 1600, V_HEIGHT + 1200);
+
+                ctx.fillStyle = '#e0f2fe';
+                for (let i = 0; i < 50; i++) {
+                    const sx = (i * 97 + animFrameCounter) % (V_WIDTH + 1200) - 600;
+                    const sy = L4_PLAT1_Y - 300 + ((i * 53 + animFrameCounter * 2) % (L4_PLAT2_Y - L4_PLAT1_Y + 600));
+                    const ssize = (i % 3 === 0) ? 3 : 2;
+                    ctx.fillRect(sx, sy, ssize, ssize);
+                }
+
+                ctx.fillStyle = '#1e3a8a';
+                for (let x = -600; x < V_WIDTH + 600; x += 120) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, L4_PLAT1_Y - 200);
+                    ctx.lineTo(x + 60, L4_PLAT1_Y - 40);
+                    ctx.lineTo(x + 120, L4_PLAT1_Y - 200);
+                    ctx.fill();
+                }
+
+                const iceAbyss = ctx.createLinearGradient(0, L4_PLAT2_Y + 20, 0, L4_PLAT2_Y + 400);
+                iceAbyss.addColorStop(0, '#38bdf8');
+                iceAbyss.addColorStop(0.5, '#0284c7');
+                iceAbyss.addColorStop(1, '#0369a1');
+                ctx.fillStyle = iceAbyss;
+                ctx.fillRect(-800, L4_PLAT2_Y + 20, V_WIDTH + 1600, 400);
+
+            } else if (currentLevel === 5) {
+                const skyGrad = ctx.createLinearGradient(0, L5_PLAT3_Y - 400, 0, L5_PLAT1_Y + 400);
+                skyGrad.addColorStop(0, '#0d1b2a');
+                skyGrad.addColorStop(0.4, '#1b263b');
+                skyGrad.addColorStop(0.7, '#415a77');
+                skyGrad.addColorStop(1, '#132a13');
+                ctx.fillStyle = skyGrad;
+                ctx.fillRect(-800, L5_PLAT3_Y - 500, V_WIDTH + 1600, L5_PLAT1_Y - L5_PLAT3_Y + 1000);
+
+                ctx.fillStyle = '#a3b18a';
+                for (let i = 0; i < 60; i++) {
+                    const sx = (i * 83 + animFrameCounter * 0.5) % (V_WIDTH + 1200) - 600;
+                    const sy = L5_PLAT3_Y - 300 + ((i * 47) % (L5_PLAT1_Y - L5_PLAT3_Y + 600));
+                    const spark = (animFrameCounter + i * 3) % 20 < 10 ? 2 : 4;
+                    ctx.fillRect(sx, sy, spark, spark);
+                }
+
+                const forestGrad = ctx.createLinearGradient(0, L5_PLAT1_Y + 20, 0, L5_PLAT1_Y + 400);
+                forestGrad.addColorStop(0, '#31572c');
+                forestGrad.addColorStop(1, '#132a13');
+                ctx.fillStyle = forestGrad;
+                ctx.fillRect(-800, L5_PLAT1_Y + 20, V_WIDTH + 1600, 400);
+            }
+        }
+
+        function drawPlankPlatform(startX, startY, units, mode = 'wood') {
+            for (let i = 0; i < units; i++) {
+                const px = startX + i * UNIT_PIXELS;
+                
+                if (mode === 'volcanic') {
+                    ctx.fillStyle = (i % 2 === 0) ? '#3a2020' : '#2d1818';
+                    ctx.fillRect(px, startY, UNIT_PIXELS, 20);
+                    ctx.fillStyle = '#ff4500';
+                    ctx.fillRect(px + 2, startY + 2, UNIT_PIXELS - 4, 3);
+                    ctx.fillStyle = '#150a0a';
+                    ctx.fillRect(px, startY, 2, 20);
+                    ctx.fillRect(px + UNIT_PIXELS - 2, startY, 2, 20);
+                } else if (mode === 'ice') {
+                    ctx.fillStyle = (i % 2 === 0) ? '#38bdf8' : '#7dd3fc';
+                    ctx.fillRect(px, startY, UNIT_PIXELS, 20);
+                    ctx.fillStyle = '#f0f9ff';
+                    ctx.fillRect(px + 2, startY + 2, UNIT_PIXELS - 4, 4);
+                    ctx.fillStyle = '#0284c7';
+                    ctx.fillRect(px, startY, 2, 20);
+                    ctx.fillRect(px + UNIT_PIXELS - 2, startY, 2, 20);
+                } else if (mode === 'moss') {
+                    ctx.fillStyle = (i % 2 === 0) ? '#31572c' : '#4f772d';
+                    ctx.fillRect(px, startY, UNIT_PIXELS, 20);
+                    ctx.fillStyle = '#90a955';
+                    ctx.fillRect(px + 2, startY + 2, UNIT_PIXELS - 4, 4);
+                    ctx.fillStyle = '#132a13';
+                    ctx.fillRect(px, startY, 2, 20);
+                    ctx.fillRect(px + UNIT_PIXELS - 2, startY, 2, 20);
+                } else {
+                    const isPurpleWorld = (mode === 'purple');
+                    ctx.fillStyle = isPurpleWorld ? ((i % 2 === 0) ? '#4a325e' : '#3c274d') : ((i % 2 === 0) ? '#825026' : '#6e431f');
+                    ctx.fillRect(px, startY, UNIT_PIXELS, 20);
+
+                    ctx.fillStyle = isPurpleWorld ? '#6d4c87' : '#9e6533';
+                    ctx.fillRect(px + 2, startY + 2, UNIT_PIXELS - 4, 4);
+                    
+                    ctx.fillStyle = isPurpleWorld ? '#241630' : '#3d230d';
+                    ctx.fillRect(px, startY, 2, 20);
+                    ctx.fillRect(px + UNIT_PIXELS - 2, startY, 2, 20);
+                }
+            }
+        }
+function drawBreadItemAt(drawX, drawY) {
+    ctx.save();
+    
+    // Halo lumineux doré
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.35)';
+    ctx.beginPath();
+    ctx.arc(drawX, drawY, 14, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Corps de la baguette (forme elliptique inclinée)
+    ctx.save();
+    ctx.translate(drawX, drawY);
+    ctx.rotate(-Math.PI / 12); // Légère inclinaison naturelle
+
+    // Base/Contour sombre
+    ctx.fillStyle = '#5d4037';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 15, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Croute dorée
+    ctx.fillStyle = '#d78b30';
+    ctx.beginPath();
+    ctx.ellipse(0, -1, 13, 5.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rehausses claires (reflets dorés)
+    ctx.fillStyle = '#f5b041';
+    ctx.beginPath();
+    ctx.ellipse(-2, -2, 10, 3.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Entailles du boulanger (scarifications/grignes)
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-8, -2); ctx.lineTo(-4, 2);
+    ctx.moveTo(-2, -3); ctx.lineTo(2, 1);
+    ctx.moveTo(4, -2);  ctx.lineTo(8, 2);
+    ctx.stroke();
+
+    ctx.restore();
+    ctx.restore();
+}
+
+
+
+        
+        function drawLadder(x, topY, height) {
+            const width = 32;
+            ctx.save();
+            ctx.fillStyle = '#8b5a2b';
+            ctx.fillRect(x, topY, 6, height);
+            ctx.fillRect(x + width - 6, topY, 6, height);
+            ctx.fillStyle = '#a66d3b';
+            ctx.fillRect(x + 2, topY, 2, height);
+            ctx.fillRect(x + width - 4, topY, 2, height);
+            
+            ctx.fillStyle = '#6d421e';
+            const rungSpacing = 24;
+            for (let r = 8; r < height - 4; r += rungSpacing) {
+                ctx.fillRect(x + 4, topY + r, width - 8, 6);
+                ctx.fillStyle = '#9e6738';
+                ctx.fillRect(x + 4, topY + r, width - 8, 2);
+                ctx.fillStyle = '#6d421e';
+            }
+            ctx.restore();
+        }
+
+        function drawVine(x, topY, height) {
+            const width = 28;
+            ctx.save();
+            const centerX = x + width / 2;
+            ctx.strokeStyle = '#2d7a3a';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.moveTo(centerX, topY);
+            for (let y = topY; y <= topY + height; y += 16) {
+                const offset = Math.sin(y * 0.05) * 6;
+                ctx.lineTo(centerX + offset, y);
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = '#43a047';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(centerX, topY);
+            for (let y = topY; y <= topY + height; y += 16) {
+                const offset = Math.sin(y * 0.05) * 6;
+                ctx.lineTo(centerX + offset, y);
+            }
+            ctx.stroke();
+
+            for (let y = topY + 12; y < topY + height - 10; y += 24) {
+                const side = (Math.floor(y / 24) % 2 === 0) ? 1 : -1;
+                const leafX = centerX + Math.sin(y * 0.05) * 6;
+                ctx.fillStyle = '#66bb6a';
+                ctx.beginPath();
+                ctx.ellipse(leafX + side * 10, y, 9, 5, side * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#1b5e20';
+                ctx.beginPath();
+                ctx.arc(leafX + side * 10, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function drawDoor(x, baseY, isOpen = false) {
+            const width = 56;
+            const height = 72;
+            const drawX = x + (UNIT_PIXELS - width) / 2;
+            const drawY = baseY - height;
+
+            ctx.save();
+            ctx.fillStyle = '#3a2312';
+            ctx.fillRect(drawX - 4, drawY - 4, width + 8, height + 4);
+            ctx.fillStyle = '#5c3a21';
+            ctx.fillRect(drawX - 2, drawY - 2, width + 4, height + 2);
+
+            if (isOpen) {
+                const portalGrad = ctx.createRadialGradient(
+                    drawX + width/2, drawY + height/2, 5,
+                    drawX + width/2, drawY + height/2, width/2
+                );
+                portalGrad.addColorStop(0, '#ffe082');
+                portalGrad.addColorStop(0.5, '#ff9800');
+                portalGrad.addColorStop(1, '#3e2723');
+                ctx.fillStyle = portalGrad;
+                ctx.fillRect(drawX, drawY, width, height);
+
+                ctx.fillStyle = '#ffffff';
+                for (let i = 0; i < 5; i++) {
+                    const px = drawX + 10 + ((i * 13 + animFrameCounter * 2) % (width - 20));
+                    const py = drawY + 10 + ((i * 17 + animFrameCounter * 3) % (height - 20));
+                    ctx.fillRect(px, py, 3, 3);
+                }
+            } else {
+                ctx.fillStyle = '#7a4d28';
+                ctx.fillRect(drawX, drawY, width, height);
+                ctx.fillStyle = '#59361a';
+                ctx.fillRect(drawX + width / 2 - 1, drawY, 2, height);
+                ctx.fillRect(drawX + 6, drawY + 6, width / 2 - 10, height - 12);
+                ctx.fillRect(drawX + width / 2 + 4, drawY + 6, width / 2 - 10, height - 12);
+
+                ctx.fillStyle = '#ffd700';
+                ctx.beginPath();
+                ctx.arc(drawX + width - 12, drawY + height / 2, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#b8860b';
+                ctx.fillRect(drawX + width - 14, drawY + height / 2 + 2, 4, 6);
+            }
+            ctx.restore();
+        }
+
+        function drawCeleryItem(x, baseY) {
+            const floatOffset = Math.sin(animFrameCounter * 0.1) * 6;
+            const drawX = x + UNIT_PIXELS / 2;
+            const drawY = baseY - 45 + floatOffset;
+
+            ctx.save();
+            // Halo lumineux vert clair
+            ctx.fillStyle = 'rgba(144, 238, 144, 0.3)';
+            ctx.beginPath();
+            ctx.arc(drawX, drawY, 20, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Feuillu du haut (vert vif)
+            ctx.fillStyle = '#4caf50';
+            ctx.beginPath();
+            ctx.arc(drawX - 6, drawY - 14, 6, 0, Math.PI * 2);
+            ctx.arc(drawX + 6, drawY - 14, 6, 0, Math.PI * 2);
+            ctx.arc(drawX, drawY - 18, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tige du céleri (vert clair)
+            ctx.fillStyle = '#8bc34a';
+            ctx.fillRect(drawX - 5, drawY - 10, 10, 22);
+
+            // Cœur/base plus claire
+            ctx.fillStyle = '#c8e6c9';
+            ctx.fillRect(drawX - 3, drawY + 2, 6, 10);
+
+            ctx.restore();
+        }
+
+        function drawTurnipItem(x, baseY) {
+            const floatOffset = Math.sin(animFrameCounter * 0.1) * 6;
+            const drawX = x + UNIT_PIXELS / 2;
+            const drawY = baseY - 45 + floatOffset;
+
+            ctx.save();
+            ctx.fillStyle = 'rgba(224, 176, 255, 0.4)';
+            ctx.beginPath();
+            ctx.arc(drawX, drawY, 22, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Leaves
+            ctx.fillStyle = '#4cc9f0';
+            ctx.fillRect(drawX - 6, drawY - 22, 5, 10);
+            ctx.fillRect(drawX + 1, drawY - 24, 5, 12);
+            ctx.fillRect(drawX + 7, drawY - 20, 5, 8);
+
+            // Turnip Bulb
+            ctx.fillStyle = '#d8b4fe';
+            ctx.beginPath();
+            ctx.arc(drawX, drawY - 4, 14, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(drawX, drawY + 2, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Root tip
+            ctx.fillStyle = '#e9d5ff';
+            ctx.fillRect(drawX - 2, drawY + 12, 4, 6);
+
+            ctx.restore();
+        }
+
+        function drawGuard(x, baseY) {
+            // 1. Dessiner la porte sur la case située juste à droite du garde
+            const doorX = x + UNIT_PIXELS;
+            drawGuardDoor(doorX, baseY);
+
+            // 2. Dessiner le garde géant sur sa case d'origine
+            const pixelSize = 5.0; 
+            const matrixWidth = 18;
+            const matrixHeight = 25;
+
+            const drawX = x + (UNIT_PIXELS - (matrixWidth * pixelSize)) / 2;
+            const drawY = baseY - (matrixHeight * pixelSize);
+
+            drawPixelMatrix(ctx, guardMatrix, guardColors, drawX, drawY, pixelSize, false);
+        }
+        function drawGuardDoor(x, baseY) {
+            const doorWidth = 50;
+            const doorHeight = 75;
+            const drawX = x + (UNIT_PIXELS - doorWidth) / 2;
+            const drawY = baseY - doorHeight;
+
+            // 1. Arc / Cadre de porte en pierre sombre
+            ctx.fillStyle = '#37474f';
+            ctx.fillRect(drawX - 6, drawY - 6, doorWidth + 12, doorHeight + 6);
+
+            // 2. Vantaux de la porte en bois renforcé
+            ctx.fillStyle = '#3e2723';
+            ctx.fillRect(drawX, drawY, doorWidth, doorHeight);
+
+            // Haut arrondi en arche
+            ctx.beginPath();
+            ctx.arc(drawX + doorWidth / 2, drawY, doorWidth / 2, Math.PI, 0);
+            ctx.fill();
+
+            // 3. Lattes de bois (lignes verticales)
+            ctx.strokeStyle = '#271510';
+            ctx.lineWidth = 2;
+            for (let i = 1; i < 4; i++) {
+                ctx.beginPath();
+                ctx.moveTo(drawX + (i * doorWidth / 4), drawY - 10);
+                ctx.lineTo(drawX + (i * doorWidth / 4), drawY + doorHeight);
+                ctx.stroke();
+            }
+
+            // 4. Renforts en fer de la porte (bandes horizontales)
+            ctx.fillStyle = '#263238';
+            ctx.fillRect(drawX, drawY + 15, doorWidth, 5);
+            ctx.fillRect(drawX, drawY + 50, doorWidth, 5);
+
+            // 5. Anneau / Poignée dorée
+            ctx.fillStyle = '#ffb300';
+            ctx.beginPath();
+            ctx.arc(drawX + doorWidth / 2 - 8, drawY + 38, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        function drawPadlock(x, y) {
+            ctx.save();
+            ctx.fillStyle = '#ffd700';
+            ctx.fillRect(x - 2, y + 8, 20, 16);
+            ctx.fillStyle = '#b8860b';
+            ctx.fillRect(x, y + 10, 16, 12);
+
+            ctx.strokeStyle = '#c0c0c0';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x + 8, y + 8, 6, Math.PI, 0);
+            ctx.stroke();
+
+            ctx.fillStyle = '#111111';
+            ctx.beginPath();
+            ctx.arc(x + 8, y + 15, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(x + 7, y + 15, 2, 4);
+
+            ctx.restore();
+        }
+
+        function drawOgres() {
+            const pixelSize = 4.5;
+            const flip = (moveDirectionX === -1);
+
+            const ogres = [
+                { unitX: ogre3X, y: ogre3Y, matrix: redOgreMatrix, colors: redOgreColors, isLeader: false, visible: ogre3Visible },
+                { unitX: ogre2X, y: ogre2Y, matrix: greyOgreMatrix, colors: greyOgreColors, isLeader: false, visible: ogre2Visible },
+                { unitX: ogre1X, y: ogre1Y, matrix: brownOgreMatrix, colors: brownOgreColors, isLeader: true, visible: ogre1Visible }
+            ];
+
+            const baseStartX = (currentLevel === 1) ? L1_X_START : ((currentLevel === 2) ? L2_PLAT1_X_START : ((currentLevel === 3) ? L3_X_START : ((currentLevel === 4) ? L4_X_START : L5_PLAT1_X_START)));
+
+            ogres.forEach((ogre) => {
+                if (!ogre.visible) return;
+                const screenPxX = baseStartX + ogre.unitX * UNIT_PIXELS;
+                const bobbing = (isMoving && !isFalling) ? Math.sin(animFrameCounter * 0.3) * 4 : 0;
+                const currentY = ogre.y - OGRE_HEIGHT + bobbing + (isFalling ? fallOffsetY : 0);
+
+                drawPixelMatrix(ctx, ogre.matrix, ogre.colors, screenPxX, currentY, pixelSize, flip);
+
+                if (ogre.isLeader && !isFalling && !hasWon && !isEnteringDoor) {
+                    ctx.fillStyle = '#ffcc00';
+                    ctx.beginPath();
+                    const badgeX = screenPxX + UNIT_PIXELS / 2;
+                    const badgeY = currentY - 16 + Math.sin(animFrameCounter * 0.2) * 4;
+                    ctx.moveTo(badgeX - 7, badgeY - 7);
+                    ctx.lineTo(badgeX + 7, badgeY - 7);
+                    ctx.lineTo(badgeX, badgeY);
+                    ctx.fill();
+                }
+            });
+        }
+
+        function finishHorizontalStep() {
+            ogre1X = targetX;
+            if (moveDirectionX === 1) {
+                if (ogre1X > ogre2X + 1) ogre2X = ogre1X - 1;
+                if (ogre2X > ogre3X + 1) ogre3X = ogre2X - 1;
+            } else if (moveDirectionX === -1) {
+                if (ogre1X < ogre2X - 1) ogre2X = ogre1X + 1;
+                if (ogre2X < ogre3X - 1) ogre3X = ogre2X + 1;
+            }
+            isMoving = false;
+        }
+
+        function updateLevel1Movement() {
+            if (currentLevelState === 'LADDER_1') {
+                const verticalSpeed = 4.5;
+                ogre1Y += verticalSpeed;
+
+                ogre2Y = Math.max(L1_PLAT1_Y, ogre1Y - UNIT_PIXELS);
+                ogre3Y = Math.max(L1_PLAT1_Y, ogre2Y - UNIT_PIXELS);
+
+                if (ogre1Y > L1_PLAT1_Y) ogre1X = L1_LADDER_UNIT_X;
+                if (ogre2Y > L1_PLAT1_Y) ogre2X = L1_LADDER_UNIT_X;
+                if (ogre3Y > L1_PLAT1_Y) ogre3X = L1_LADDER_UNIT_X;
+
+                if (ogre1Y >= targetY) {
+                    ogre1Y = targetY;
+                    ogre2Y = Math.max(L1_PLAT1_Y, ogre1Y - UNIT_PIXELS);
+                    ogre3Y = Math.max(L1_PLAT1_Y, ogre2Y - UNIT_PIXELS);
+                    isMoving = false;
+
+                    if (ogre1Y >= L1_PLAT2_Y) {
+                        currentLevelState = 'PLATFORM_2';
+                        ogre1Y = L1_PLAT2_Y;
+                        ogre1X = L1_LADDER_UNIT_X;
+                        setActionMessage("Arrivés sur la plateforme ! Allez vers la liane à gauche.");
+                    }
+                }
+            } else if (currentLevelState === 'VINE') {
+                const verticalSpeed = 4.5;
+                ogre1Y -= verticalSpeed;
+
+                ogre2Y = Math.min(L1_PLAT2_Y, ogre1Y + UNIT_PIXELS);
+                ogre3Y = Math.min(L1_PLAT2_Y, ogre2Y + UNIT_PIXELS);
+
+                if (ogre1Y < L1_PLAT2_Y) ogre1X = L1_VINE_UNIT_X;
+                if (ogre2Y < L1_PLAT2_Y) ogre2X = L1_VINE_UNIT_X;
+                if (ogre3Y < L1_PLAT2_Y) ogre3X = L1_VINE_UNIT_X;
+
+                if (ogre1Y <= targetY) {
+                    ogre1Y = targetY;
+                    ogre2Y = Math.min(L1_PLAT2_Y, ogre1Y + UNIT_PIXELS);
+                    ogre3Y = Math.min(L1_PLAT2_Y, ogre2Y + UNIT_PIXELS);
+                    isMoving = false;
+
+                    if (ogre1Y <= L1_PLAT3_Y) {
+                        currentLevelState = 'PLATFORM_3';
+                        ogre1Y = L1_PLAT3_Y;
+                        ogre1X = L1_VINE_UNIT_X;
+                        setActionMessage("Arrivés sur la plateforme ! Dirigez-vous vers la porte à droite.");
+                    }
+                }
+            } else {
+                const horizSpeed = 0.08;
+                const stepX = moveDirectionX * horizSpeed;
+                ogre1X += stepX;
+
+                const currentPlatY = (currentLevelState === 'PLATFORM_1') ? L1_PLAT1_Y : ((currentLevelState === 'PLATFORM_2') ? L1_PLAT2_Y : L1_PLAT3_Y);
+
+                if (ogre2Y < currentPlatY && currentLevelState === 'PLATFORM_2') {
+                    const distFromLadder = Math.abs(ogre1X - L1_LADDER_UNIT_X);
+                    if (distFromLadder >= 1) {
+                        ogre2X = L1_LADDER_UNIT_X + (moveDirectionX || -1) * (distFromLadder - 1);
+                        ogre2Y = currentPlatY;
+                    } else {
+                        ogre2X = L1_LADDER_UNIT_X;
+                        ogre2Y = currentPlatY - (1 - distFromLadder) * UNIT_PIXELS;
+                    }
+                } else if (ogre2Y > currentPlatY && currentLevelState === 'PLATFORM_3') {
+                    const distFromVine = Math.abs(ogre1X - L1_VINE_UNIT_X);
+                    if (distFromVine >= 1) {
+                        ogre2X = L1_VINE_UNIT_X + (moveDirectionX || 1) * (distFromVine - 1);
+                        ogre2Y = currentPlatY;
+                    } else {
+                        ogre2X = L1_VINE_UNIT_X;
+                        ogre2Y = L1_PLAT3_Y + (1 - distFromVine) * UNIT_PIXELS;
+                    }
+                } else {
+                    if (moveDirectionX === 1) {
+                        if (ogre1X > ogre2X + 1) ogre2X = ogre1X - 1;
+                    } else if (moveDirectionX === -1) {
+                        if (ogre1X < ogre2X - 1) ogre2X = ogre1X + 1;
+                    }
+                    ogre2Y = currentPlatY;
+                }
+
+                if (ogre3Y < currentPlatY && currentLevelState === 'PLATFORM_2') {
+                    const distFromLadder = Math.abs(ogre1X - L1_LADDER_UNIT_X);
+                    if (distFromLadder >= 2) {
+                        ogre3X = L1_LADDER_UNIT_X + (moveDirectionX || -1) * (distFromLadder - 2);
+                        ogre3Y = currentPlatY;
+                    } else {
+                        ogre3X = L1_LADDER_UNIT_X;
+                        ogre3Y = currentPlatY - (2 - distFromLadder) * UNIT_PIXELS;
+                    }
+                } else if (ogre3Y > currentPlatY && currentLevelState === 'PLATFORM_3') {
+                    const distFromVine = Math.abs(ogre1X - L1_VINE_UNIT_X);
+                    if (distFromVine >= 2) {
+                        ogre3X = L1_VINE_UNIT_X + (moveDirectionX || 1) * (distFromVine - 2);
+                        ogre3Y = currentPlatY;
+                    } else {
+                        ogre3X = L1_VINE_UNIT_X;
+                        ogre3Y = L1_PLAT3_Y + (2 - distFromVine) * UNIT_PIXELS;
+                    }
+                } else {
+                    if (moveDirectionX === 1) {
+                        if (ogre2X > ogre3X + 1) ogre3X = ogre2X - 1;
+                    } else if (moveDirectionX === -1) {
+                        if (ogre2X < ogre3X - 1) ogre3X = ogre2X + 1;
+                    }
+                    ogre3Y = currentPlatY;
+                }
+
+                if ((moveDirectionX === 1 && ogre1X >= targetX) || (moveDirectionX === -1 && ogre1X <= targetX)) {
+                    finishHorizontalStep();
+                }
+
+                if (currentLevelState === 'PLATFORM_3' && Math.abs(ogre1X - L1_DOOR3_UNIT_X) < 0.2 && !isEnteringDoor && !hasWon) {
+                    startDoorSequence();
+                    completeLevel(1)
+                }
+
+                const minLimit = (currentLevelState === 'PLATFORM_1') ? (L1_PLAT1_START_UNIT - 0.8) : -0.8;
+                const maxLimit = (currentLevelState === 'PLATFORM_1') ? (L1_PLAT1_START_UNIT + L1_PLAT1_UNITS - 0.2) : 12.2;
+
+                if (ogre1X < minLimit || ogre1X > maxLimit || ogre2X < minLimit || ogre2X > maxLimit || ogre3X < minLimit || ogre3X > maxLimit) {
+                    triggerFall();
+                }
+            }
+        }
+
+        function updateLevel2Movement() {
+            if (currentLevelState === 'LADDER_1' || currentLevelState === 'LADDER_2') {
+                const verticalSpeed = 4.5;
+                ogre1Y += verticalSpeed;
+
+                const startY = (currentLevelState === 'LADDER_1') ? L2_PLAT1_Y : L2_PLAT2_Y;
+                ogre2Y = Math.max(startY, ogre1Y - UNIT_PIXELS);
+                ogre3Y = Math.max(startY, ogre2Y - UNIT_PIXELS);
+
+                if (ogre1Y > startY) ogre1X = L2_LADDER_UNIT_X;
+                if (ogre2Y > startY) ogre2X = L2_LADDER_UNIT_X;
+                if (ogre3Y > startY) ogre3X = L2_LADDER_UNIT_X;
+
+                if (ogre1Y >= targetY) {
+                    ogre1Y = targetY;
+                    ogre2Y = Math.max(startY, ogre1Y - UNIT_PIXELS);
+                    ogre3Y = Math.max(startY, ogre2Y - UNIT_PIXELS);
+                    isMoving = false;
+
+                    if (currentLevelState === 'LADDER_1') {
+                        currentLevelState = 'PLATFORM_2';
+                        ogre1Y = L2_PLAT2_Y;
+                        ogre1X = L2_LADDER_UNIT_X;
+                        setActionMessage("Récupérez le bâton de céleri à droite.");
+                    } else {
+                        currentLevelState = 'PLATFORM_3';
+                        ogre1Y = L2_PLAT3_Y;
+                        ogre1X = L2_LADDER_UNIT_X;
+                        setActionMessage("Arrivés sur la plateforme ! Dirigez-vous vers la porte à droite.");
+                    }
+                }
+            } else {
+                const horizSpeed = 0.08;
+                const stepX = moveDirectionX * horizSpeed;
+                ogre1X += stepX;
+
+                const currentPlatY = (currentLevelState === 'PLATFORM_1') ? L2_PLAT1_Y : ((currentLevelState === 'PLATFORM_2') ? L2_PLAT2_Y : L2_PLAT3_Y);
+
+                if (ogre2Y < currentPlatY && (currentLevelState === 'PLATFORM_2' || currentLevelState === 'PLATFORM_3')) {
+                    const distFromLadder = Math.abs(ogre1X - L2_LADDER_UNIT_X);
+                    if (distFromLadder >= 1) {
+                        ogre2X = L2_LADDER_UNIT_X + (moveDirectionX || -1) * (distFromLadder - 1);
+                        ogre2Y = currentPlatY;
+                    } else {
+                        ogre2X = L2_LADDER_UNIT_X;
+                        ogre2Y = currentPlatY - (1 - distFromLadder) * UNIT_PIXELS;
+                    }
+                } else {
+                    if (moveDirectionX === 1) {
+                        if (ogre1X > ogre2X + 1) ogre2X = ogre1X - 1;
+                    } else if (moveDirectionX === -1) {
+                        if (ogre1X < ogre2X - 1) ogre2X = ogre1X + 1;
+                    }
+                    ogre2Y = currentPlatY;
+                }
+
+                if (ogre3Y < currentPlatY && (currentLevelState === 'PLATFORM_2' || currentLevelState === 'PLATFORM_3')) {
+                    const distFromLadder = Math.abs(ogre1X - L2_LADDER_UNIT_X);
+                    if (distFromLadder >= 2) {
+                        ogre3X = L2_LADDER_UNIT_X + (moveDirectionX || -1) * (distFromLadder - 2);
+                        ogre3Y = currentPlatY;
+                    } else {
+                        ogre3X = L2_LADDER_UNIT_X;
+                        ogre3Y = currentPlatY - (2 - distFromLadder) * UNIT_PIXELS;
+                    }
+                } else {
+                    if (moveDirectionX === 1) {
+                        if (ogre2X > ogre3X + 1) ogre3X = ogre2X - 1;
+                    } else if (moveDirectionX === -1) {
+                        if (ogre2X < ogre3X - 1) ogre3X = ogre2X + 1;
+                    }
+                    ogre3Y = currentPlatY;
+                }
+
+                if ((moveDirectionX === 1 && ogre1X >= targetX) || (moveDirectionX === -1 && ogre1X <= targetX)) {
+                    finishHorizontalStep();
+                }
+
+                if (currentLevelState === 'PLATFORM_2' && Math.abs(ogre1X - L2_KEY_UNIT_X) < 0.5 && !hasKey) {
+                    hasKey = true;
+                if (keyStatus) keyStatus.textContent = "POSSÉDÉE 🥬";
+                    setActionMessage("Céleri récupéré ! Revenez vers l'échelle pour descendre.");
+                }
+
+                if (currentLevelState === 'PLATFORM_3' && Math.abs(ogre1X - L2_DOOR3_UNIT_X) < 0.2 && !isEnteringDoor && !hasWon) {
+                    startDoorSequence();
+                    completeLevel(2);
+                }
+
+                if (ogre1X < -0.8 || ogre1X > 12.2 || ogre2X < -0.8 || ogre2X > 12.2 || ogre3X < -0.8 || ogre3X > 12.2) {
+                    triggerFall();
+                }
+            }
+        }
+
+        function updateLevel3Movement() {
+            BREAD_UNITS.forEach((unitX, index) => {
+                if (!collectedBreads[index] && Math.abs(ogre1X - unitX) < 0.6) {
+                    collectedBreads[index] = true;
+                    
+                    const count = collectedBreads.filter(Boolean).length;
+                    setActionMessage(`Les ogres ramassent des pains sur l'escalier !`);
+                }
+            });
+            if (currentLevelState === 'VINE_1') {
+                const verticalSpeed = 4.5;
+                ogre1Y -= verticalSpeed;
+
+                ogre2Y = Math.min(L3_PLAT1_Y, ogre1Y + UNIT_PIXELS);
+                ogre3Y = Math.min(L3_PLAT1_Y, ogre2Y + UNIT_PIXELS);
+
+                if (ogre1Y < L3_PLAT1_Y) ogre1X = L3_VINE1_UNIT_X;
+                if (ogre2Y < L3_PLAT1_Y) ogre2X = L3_VINE1_UNIT_X;
+                if (ogre3Y < L3_PLAT1_Y) ogre3X = L3_VINE1_UNIT_X;
+
+                if (ogre1Y <= targetY) {
+                    ogre1Y = targetY;
+                    ogre2Y = Math.min(L3_PLAT1_Y, ogre1Y + UNIT_PIXELS);
+                    ogre3Y = Math.min(L3_PLAT1_Y, ogre2Y + UNIT_PIXELS);
+                    isMoving = false;
+
+                    currentLevelState = 'PLATFORM_2';
+                    ogre1Y = L3_PLAT2_Y;
+                    ogre1X = L3_VINE1_UNIT_X;
+                    setActionMessage("Arrivés sur la plateforme ! Descendez l'escalier vers la droite.");
+                }
+            } else if (currentLevelState === 'VINE_2') {
+                const verticalSpeed = 4.5;
+                ogre1Y -= verticalSpeed;
+
+                ogre2Y = Math.min(L3_PLAT3_Y, ogre1Y + UNIT_PIXELS);
+                ogre3Y = Math.min(L3_PLAT3_Y, ogre2Y + UNIT_PIXELS);
+
+                if (ogre1Y < L3_PLAT3_Y) ogre1X = L3_VINE2_UNIT_X;
+                if (ogre2Y < L3_PLAT3_Y) ogre2X = L3_VINE2_UNIT_X;
+                if (ogre3Y < L3_PLAT3_Y) ogre3X = L3_VINE2_UNIT_X;
+
+                if (ogre1Y <= targetY) {
+                    ogre1Y = targetY;
+                    ogre2Y = Math.min(L3_PLAT3_Y, ogre1Y + UNIT_PIXELS);
+                    ogre3Y = Math.min(L3_PLAT3_Y, ogre2Y + UNIT_PIXELS);
+                    isMoving = false;
+
+                    currentLevelState = 'PLATFORM_4';
+                    ogre1Y = L3_PLAT4_Y;
+                    ogre1X = L3_VINE2_UNIT_X;
+                    setActionMessage("Arrivés sur la plateforme ! Avancez vers la porte à gauche.");
+                }
+            } else if (currentLevelState === 'PLATFORM_4') {
+                const horizSpeed = 0.08;
+                const stepX = moveDirectionX * horizSpeed;
+                ogre1X += stepX;
+
+                ogre1Y = L3_PLAT4_Y;
+
+                const distFromVine = Math.abs(ogre1X - L3_VINE2_UNIT_X);
+
+                if (ogre2Y > L3_PLAT4_Y) {
+                    if (distFromVine >= 1) {
+                        ogre2X = L3_VINE2_UNIT_X + (moveDirectionX || -1) * (distFromVine - 1);
+                        ogre2Y = L3_PLAT4_Y;
+                    } else {
+                        ogre2X = L3_VINE2_UNIT_X;
+                        ogre2Y = L3_PLAT4_Y + (1 - distFromVine) * UNIT_PIXELS;
+                    }
+                } else {
+                    if (moveDirectionX === 1) {
+                        if (ogre1X > ogre2X + 1) ogre2X = ogre1X - 1;
+                    } else if (moveDirectionX === -1) {
+                        if (ogre1X < ogre2X - 1) ogre2X = ogre1X + 1;
+                    }
+                    ogre2Y = L3_PLAT4_Y;
+                }
+
+                if (ogre3Y > L3_PLAT4_Y) {
+                    if (distFromVine >= 2) {
+                        ogre3X = L3_VINE2_UNIT_X + (moveDirectionX || -1) * (distFromVine - 2);
+                        ogre3Y = L3_PLAT4_Y;
+                    } else {
+                        ogre3X = L3_VINE2_UNIT_X;
+                        ogre3Y = L3_PLAT4_Y + (2 - distFromVine) * UNIT_PIXELS;
+                    }
+                } else {
+                    if (moveDirectionX === 1) {
+                        if (ogre2X > ogre3X + 1) ogre3X = ogre2X - 1;
+                    } else if (moveDirectionX === -1) {
+                        if (ogre2X < ogre3X - 1) ogre3X = ogre2X + 1;
+                    }
+                    ogre3Y = L3_PLAT4_Y;
+                }
+
+                if ((moveDirectionX === 1 && ogre1X >= targetX) || (moveDirectionX === -1 && ogre1X <= targetX)) {
+                    finishHorizontalStep();
+                }
+
+                if (Math.abs(ogre1X - L3_DOOR_UNIT_X) < 0.2 && !isEnteringDoor && !hasWon) {
+                    startDoorSequence();
+                    completeLevel(3);
+                }
+
+                const minBound = 11.2;
+                const maxBound = 14.8;
+                if (ogre1X < minBound || ogre1X > maxBound || ogre2X < minBound || ogre2X > maxBound || ogre3X < minBound || ogre3X > maxBound) {
+                    triggerFall();
+                }
+            } else {
+                const horizSpeed = 0.08;
+                const stepX = moveDirectionX * horizSpeed;
+                ogre1X += stepX;
+
+                if (currentLevelState === 'PLATFORM_1') {
+                    if (moveDirectionX === 1) {
+                        if (ogre1X > ogre2X + 1) ogre2X = ogre1X - 1;
+                        if (ogre2X > ogre3X + 1) ogre3X = ogre2X - 1;
+                    } else {
+                        if (ogre1X < ogre2X - 1) ogre2X = ogre1X + 1;
+                        if (ogre2X < ogre3X - 1) ogre3X = ogre2X + 1;
+                    }
+                    ogre1Y = L3_PLAT1_Y;
+                    ogre2Y = L3_PLAT1_Y;
+                    ogre3Y = L3_PLAT1_Y;
+                } else {
+                    const distFromVine1 = Math.abs(ogre1X - L3_VINE1_UNIT_X);
+
+                    if (ogre2Y > L3_PLAT2_Y && ogre2X === L3_VINE1_UNIT_X) {
+                        if (distFromVine1 >= 1) {
+                            ogre2X = L3_VINE1_UNIT_X + (moveDirectionX || 1) * (distFromVine1 - 1);
+                            ogre2Y = getL3HeightForUnit(ogre2X);
+                        } else {
+                            ogre2X = L3_VINE1_UNIT_X;
+                            ogre2Y = L3_PLAT2_Y + (1 - distFromVine1) * UNIT_PIXELS;
+                        }
+                    } else {
+                        if (moveDirectionX === 1) {
+                            if (ogre1X > ogre2X + 1) ogre2X = ogre1X - 1;
+                        } else if (moveDirectionX === -1) {
+                            if (ogre1X < ogre2X - 1) ogre2X = ogre1X + 1;
+                        }
+                        ogre2Y = getL3HeightForUnit(ogre2X);
+                    }
+
+                    if (ogre3Y > L3_PLAT2_Y && ogre3X === L3_VINE1_UNIT_X) {
+                        if (distFromVine1 >= 2) {
+                            ogre3X = L3_VINE1_UNIT_X + (moveDirectionX || 1) * (distFromVine1 - 2);
+                            ogre3Y = getL3HeightForUnit(ogre3X);
+                        } else {
+                            ogre3X = L3_VINE1_UNIT_X;
+                            ogre3Y = L3_PLAT2_Y + (2 - distFromVine1) * UNIT_PIXELS;
+                        }
+                    } else {
+                        if (moveDirectionX === 1) {
+                            if (ogre2X > ogre3X + 1) ogre3X = ogre2X - 1;
+                        } else if (moveDirectionX === -1) {
+                            if (ogre2X < ogre3X - 1) ogre3X = ogre2X + 1;
+                        }
+                        ogre3Y = getL3HeightForUnit(ogre3X);
+                    }
+
+                    ogre1Y = getL3HeightForUnit(ogre1X);
+                }
+
+                if ((moveDirectionX === 1 && ogre1X >= targetX) || (moveDirectionX === -1 && ogre1X <= targetX)) {
+                    finishHorizontalStep();
+                }
+
+                if (ogre1X >= 12 && currentLevelState === 'PLATFORM_2') {
+                    currentLevelState = 'PLATFORM_3';
+                } else if (ogre1X <= 2 && currentLevelState === 'PLATFORM_3') {
+                    currentLevelState = 'PLATFORM_2';
+                }
+
+                const minBound = (currentLevelState === 'PLATFORM_1') ? (L3_PLAT1_START_UNIT - 0.8) : -0.8;
+                const maxBound = (currentLevelState === 'PLATFORM_1') ? (L3_PLAT1_START_UNIT + L3_PLAT1_UNITS - 0.2) : 14.8;
+
+                if (ogre1X < minBound || ogre1X > maxBound || ogre2X < minBound || ogre2X > maxBound || ogre3X < minBound || ogre3X > maxBound) {
+                    triggerFall();
+                }
+            }
+        }
+
+        function updateLevel4Movement() {
+            const verticalSpeed = 4.5;
+            ogre1Y += verticalSpeed;
+
+            ogre2Y = Math.max(L4_PLAT1_Y, ogre1Y - OGRE_HEIGHT);
+            ogre3Y = Math.max(L4_PLAT1_Y, ogre2Y - OGRE_HEIGHT);
+
+            ogre1X = L4_LADDER_UNIT_X;
+            ogre2X = L4_LADDER_UNIT_X;
+            ogre3X = L4_LADDER_UNIT_X;
+
+            if (ogre1Y >= targetY) {
+                ogre1Y = targetY;
+                isMoving = false;
+                startDoorSequence();
+                completeLevel(4);
+            }
+        }
+
+        function updateLevel5Movement() {
+            checkGuardProximity();
+            
+            if (currentLevelState === 'VINE_1' || currentLevelState === 'VINE_2') {
+                const verticalSpeed = 4.5;
+                ogre1Y -= verticalSpeed;
+
+                const startY = (currentLevelState === 'VINE_1') ? L5_PLAT1_Y : L5_PLAT2_Y;
+                ogre2Y = Math.min(startY, ogre1Y + UNIT_PIXELS);
+                ogre3Y = Math.min(startY, ogre2Y + UNIT_PIXELS);
+
+                if (ogre1Y < startY) ogre1X = L5_VINE_UNIT_X;
+                if (ogre2Y < startY) ogre2X = L5_VINE_UNIT_X;
+                if (ogre3Y < startY) ogre3X = L5_VINE_UNIT_X;
+
+                if (ogre1Y <= targetY) {
+                    ogre1Y = targetY;
+                    ogre2Y = Math.min(startY, ogre1Y + UNIT_PIXELS);
+                    ogre3Y = Math.min(startY, ogre2Y + UNIT_PIXELS);
+                    isMoving = false;
+
+                    if (currentLevelState === 'VINE_1') {
+                        currentLevelState = 'PLATFORM_2';
+                        ogre1Y = L5_PLAT2_Y;
+                        ogre1X = L5_VINE_UNIT_X;
+                        setActionMessage("Allez chercher le navet à droite.");
+                    } else {
+                        currentLevelState = 'PLATFORM_3';
+                        ogre1Y = L5_PLAT3_Y;
+                        ogre1X = L5_VINE_UNIT_X;
+                        setActionMessage("Arrivés sur la plateforme ! Dirigez-vous vers la droite.");
+                    }
+                }
+            } else {
+                const horizSpeed = 0.08;
+                const stepX = moveDirectionX * horizSpeed;
+                const currentPlatY = (currentLevelState === 'PLATFORM_1') ? L5_PLAT1_Y : ((currentLevelState === 'PLATFORM_2') ? L5_PLAT2_Y : L5_PLAT3_Y);
+
+                // --- CAS 1 : DEPLACEMENT SOLO DE L'OGRE ROUGE (OGRE 3) ---
+                if (isRedOgreSoloMoving) {
+                    ogre3X += stepX; // Seul ogre3 (rouge) avance
+                    ogre3Y = currentPlatY;
+
+                    // Détection de l'arrivée à la porte
+                    if ((moveDirectionX === 1 && ogre3X >= targetX) || (moveDirectionX === -1 && ogre3X <= targetX)) {
+                        ogre3X = targetX;
+                        isMoving = false;
+                        isRedOgreSoloMoving = false;
+                        redOgreEscaped=true;
+                        ogre3Visible = false;
+                        comptOgre++;
+                        updateDialogText("Quelle audace ! Il a profité d'une distraction mais ça n'arrivera plus.");                       
+                        if (typeof setActionMessage === 'function') {
+                            setActionMessage("La compétence de l'ogre rouge lui a permis de franchir seul la porte !");
+                            if (comptOgre >= 3) {
+                                setTimeout(() => {showPostface();},2000);
+                            }
+                        }
+                    }
+                    return; // On stoppe l'exécution ici pour ne pas impacter ogre1 et ogre2
+                }
+
+                // --- CAS : DÉPLACEMENT SOLO DE L'OGRE BRUN (OGRE 1) ---
+                if (isBrownOgreSoloMoving) {
+                    ogre1X += stepX; // Seul l'ogre1 (brun) avance
+                    ogre1Y = currentPlatY;
+
+                    if ((moveDirectionX === 1 && ogre1X >= targetX) || (moveDirectionX === -1 && ogre1X <= targetX)) {
+                        ogre1X = targetX;
+                        isMoving = false;
+                        isBrownOgreSoloMoving = false;
+                        ogre1Visible = false;
+                        setActionMessage("La compétence de l'ogre marron lui a permis de franchir seul la porte !");
+                        if (comptOgre >= 3) {
+                            setTimeout(() => {showPostface();},2000);
+                        }
+                    }
+                    return; // On arrête la fonction ici pour que les autres ogres restent immobiles
+                }
+
+
+
+                if (isGreenOgreSoloMoving) {
+                    ogre2X += stepX; // Seul ogre2 (vert) avance
+                    ogre2Y = currentPlatY;
+
+                    // Détection de l'arrivée à la porte
+                    if ((moveDirectionX === 1 && ogre2X >= targetX) || (moveDirectionX === -1 && ogre2X <= targetX)) {
+                        ogre2X = targetX;
+                        isMoving = false;
+                        isGreenOgreSoloMoving = false;
+                        ogre2Visible = false;                       
+                        if (typeof setActionMessage === 'function') {
+                            setActionMessage("La compétence de l'ogre vert lui a permis de passer l'obstacle !");
+                        }
+                        if (comptOgre >= 3) {
+                            setTimeout(() => {showPostface();},2000);
+                        }
+                    }
+                    return; // On stoppe l'exécution ici pour ne pas impacter ogre1 et ogre2
+                }
+                // --- CAS 2 : DEPLACEMENT NORMAL DU GROUPE ---
+                ogre1X += stepX;
+
+                if (ogre2Y > currentPlatY && (currentLevelState === 'PLATFORM_2' || currentLevelState === 'PLATFORM_3')) {
+                    const distFromVine = Math.abs(ogre1X - L5_VINE_UNIT_X);
+                    if (distFromVine >= 1) {
+                        ogre2X = L5_VINE_UNIT_X + (moveDirectionX || 1) * (distFromVine - 1);
+                        ogre2Y = currentPlatY;
+                    } else {
+                        ogre2X = L5_VINE_UNIT_X;
+                        ogre2Y = currentPlatY + (1 - distFromVine) * UNIT_PIXELS;
+                    }
+                } else {
+                    if (moveDirectionX === 1) {
+                        if (ogre1X > ogre2X + 1) ogre2X = ogre1X - 1;
+                    } else if (moveDirectionX === -1) {
+                        if (ogre1X < ogre2X - 1) ogre2X = ogre1X + 1;
+                    }
+                    ogre2Y = currentPlatY;
+                }
+
+                if (ogre3Y > currentPlatY && (currentLevelState === 'PLATFORM_2' || currentLevelState === 'PLATFORM_3')) {
+                    const distFromVine = Math.abs(ogre1X - L5_VINE_UNIT_X);
+                    if (distFromVine >= 2) {
+                        ogre3X = L5_VINE_UNIT_X + (moveDirectionX || 1) * (distFromVine - 2);
+                        ogre3Y = currentPlatY;
+                    } else {
+                        ogre3X = L5_VINE_UNIT_X;
+                        ogre3Y = currentPlatY + (2 - distFromVine) * UNIT_PIXELS;
+                    }
+                } else {
+                    if (moveDirectionX === 1) {
+                        if (ogre2X > ogre3X + 1) ogre3X = ogre2X - 1;
+                    } else if (moveDirectionX === -1) {
+                        if (ogre2X < ogre3X - 1) ogre3X = ogre2X + 1;
+                    }
+                    ogre3Y = currentPlatY;
+                }
+
+                if ((moveDirectionX === 1 && ogre1X >= targetX) || (moveDirectionX === -1 && ogre1X <= targetX)) {
+                    finishHorizontalStep();
+                }
+
+                if (currentLevelState === 'PLATFORM_2' && Math.abs(ogre1X - L5_TURNIP_UNIT_X) < 0.5 && !hasTurnip) {
+                    hasTurnip = true;
+                    if (keyStatus) keyStatus.textContent = "POSSÉDÉ 🧅";
+                    setActionMessage("Navet récupéré ! Retournez à la liane à gauche pour monter.");
+                }
+
+                if (currentLevelState === 'PLATFORM_3' && Math.abs(ogre1X - L5_GUARD_UNIT_X) < 0.5 && !hasWon) {
+                    hasWon = true;
+                }
+
+                if (ogre1X < -0.8 || ogre1X > 12.2 || ogre2X < -0.8 || ogre2X > 12.2 || ogre3X < -0.8 || ogre3X > 12.2) {
+                    triggerFall();
+                }
+            }
+        }
+
+        function switchLevel(levelNum) {
+            currentLevel = levelNum;
+            isMoving = false;
+            isFalling = false;
+            fallOffsetY = 0;
+            fallVelocityY = 0;
+            hasWon = false;
+            hasKey = false;
+            hasTurnip = false;
+            dialogTriggered = false;
+            redOgreEscaped = false;
+            isGreenOgreSoloMoving = false;
+            isBrownOgreSoloMoving = false;
+            pwdGiven = false;
+            comptBG = 0;
+            comptOgre = 0;
+            const index = levelNum - 1;
+            // Si le niveau est bloqué, on empêche le changement
+            if (!niveauxDebloques[index]) {
+                console.warn(`Le niveau ${levelNum} n'est pas encore débloqué.`);
+                return;
+            }
+            isEnteringDoor = false;
+            doorStep = 0;
+            doorTimer = 0;
+            ogre1Visible = true;
+            ogre2Visible = true;
+            ogre3Visible = true;
+            document.getElementById("dialog-overlay").style.display = "none";
+            document.querySelectorAll('header button').forEach(b => b.classList.remove('btn-active'));
+            const activeBtn = document.getElementById(`btnLevel${levelNum}`);
+            if (activeBtn) activeBtn.classList.add('btn-active');
+
+        //    if (hudKey) {
+        //        if (levelNum === 2) {
+        //            hudKey.classList.remove('hidden');
+        //            if (hudItemLabel) hudItemLabel.textContent = "🥬 CÉLERI :";
+        //            if (keyStatus) keyStatus.textContent = "NON POSSÉDÉ";
+        //        } else if (levelNum === 5) {
+        //            hudKey.classList.remove('hidden');
+        //            if (hudItemLabel) hudItemLabel.textContent = "🧅 NAVET :";
+        //            if (keyStatus) keyStatus.textContent = "NON POSSÉDÉ";
+        //        } else {
+        //            hudKey.classList.add('hidden');
+        //        }
+        //    }
+        
+            if (levelNum === 1) {
+                currentLevelState = 'PLATFORM_1';
+                ogre1X = 3; ogre2X = 4; ogre3X = 5;
+                ogre1Y = L1_PLAT1_Y; ogre2Y = L1_PLAT1_Y; ogre3Y = L1_PLAT1_Y;
+                setActionMessage("Niveau 1 : Cliquez sur le jeu pour déplacer les ogres.");
+            } else if (levelNum === 2) {
+                currentLevelState = 'PLATFORM_1';
+                ogre1X = 9; ogre2X = 10; ogre3X = 11;
+                ogre1Y = L2_PLAT1_Y; ogre2Y = L2_PLAT1_Y; ogre3Y = L2_PLAT1_Y;
+                setActionMessage("Niveau 2 : Déplacez-vous vers l'échelle à gauche pour descendre.");
+            } else if (levelNum === 3) {
+                collectedBreads = [false, false, false];
+                hasBread = false;
+                currentLevelState = 'PLATFORM_1';
+                ogre1X = 0; ogre2X = 1; ogre3X = 2;
+                ogre1Y = L3_PLAT1_Y; ogre2Y = L3_PLAT1_Y; ogre3Y = L3_PLAT1_Y;
+                setActionMessage("Niveau 3 : Grimpez la première liane.");
+            } else if (levelNum === 4) {
+                currentLevelState = 'PLATFORM_1';
+                ogre1X = L4_LADDER_UNIT_X; 
+                ogre2X = L4_LADDER_UNIT_X; 
+                ogre3X = L4_LADDER_UNIT_X;
+                ogre1Y = L4_PLAT1_Y; 
+                ogre2Y = L4_PLAT1_Y; 
+                ogre3Y = L4_PLAT1_Y;
+                setActionMessage("Niveau 4 : Cliquez pour faire descendre les ogres.");
+            } else if (levelNum === 5) {
+                isRedOgreSoloMoving = false;
+                currentLevelState = 'PLATFORM_1';
+                ogre1X = 10; ogre2X = 11; ogre3X = 12; // Starting on the right side of platform 1
+                ogre1Y = L5_PLAT1_Y; ogre2Y = L5_PLAT1_Y; ogre3Y = L5_PLAT1_Y;
+                setActionMessage("Niveau 5 : Déplacez-vous à gauche pour grimper la liane.");
+            }
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (redOgreEscaped && !isGreenOgreSoloMoving) return;
+            const rect = canvas.getBoundingClientRect();
+            const clickPxX = (e.clientX - rect.left) * (V_WIDTH / rect.width) + cameraX;
+            const clickPxY = (e.clientY - rect.top) * (V_HEIGHT / rect.height) + cameraY;
+
+            if (dialogTriggered) {
+                // Si nous sommes au niveau 5 sur la plateforme du gardien
+                if (redOgreEscaped) return;
+                if (currentLevel === 5) {
+                    const baseStartX = L5_PLAT1_X_START;
+                    const clickedUnitX = Math.floor((clickPxX - baseStartX) / UNIT_PIXELS);
+                    const doorMinY = L5_PLAT3_Y - (UNIT_PIXELS * 1.5); // Bord supérieur de la porte (ex: 2 unités de haut)
+                    const doorMaxY = L5_PLAT3_Y;                    // Bord inférieur (niveau du sol de la plateforme)
+                    // Si on clique sur la porte à droite du gardien (ex: unité 12 ou 13)
+                    if (clickedUnitX === 12 && clickPxY >= doorMinY && clickPxY <= doorMaxY) {
+
+                        isRedOgreSoloMoving = true; 
+                        targetX = clickedUnitX;
+                        moveDirectionX = (targetX > ogre3X) ? 1 : -1;
+                        isMoving = true;
+                        
+
+
+                        return;
+                    }
+                }
+                
+                // Si le dialogue est ouvert et qu'on n'a pas cliqué sur la porte, on ignore le clic
+                return; 
+            }
+            if (isFalling || hasWon || isEnteringDoor) return;
+
+            if (currentLevel === 1) {
+                const baseStartX = L1_X_START;
+                const clickedUnitX = Math.floor((clickPxX - baseStartX) / UNIT_PIXELS);
+
+                if (currentLevelState === 'PLATFORM_1') {
+                    if (clickedUnitX === L1_LADDER_UNIT_X && Math.abs(ogre1X - L1_LADDER_UNIT_X) < 1.0) {
+                        currentLevelState = 'LADDER_1';
+                        targetY = L1_PLAT2_Y;
+                        isMoving = true;
+                        moveDirectionY = 1;
+                        setActionMessage("Les ogres descendent à l'échelle...");
+                        return;
+                    }
+                } else if (currentLevelState === 'PLATFORM_2') {
+                    if (clickedUnitX === L1_VINE_UNIT_X && Math.abs(ogre1X - L1_VINE_UNIT_X) < 1.0) {
+                        currentLevelState = 'VINE';
+                        targetY = L1_PLAT3_Y;
+                        isMoving = true;
+                        moveDirectionY = -1;
+                        setActionMessage("Les ogres grimpent à la liane...");
+                        return;
+                    }
+                }
+
+                targetX = Math.min(Math.max(clickedUnitX, -1), 13);
+                if (targetX === Math.round(ogre1X)) return;
+                moveDirectionX = (targetX > ogre1X) ? 1 : -1;
+                isMoving = true;
+
+            } else if (currentLevel === 2) {
+                const baseStartX = L2_PLAT1_X_START;
+                const clickedUnitX = Math.floor((clickPxX - baseStartX) / UNIT_PIXELS);
+
+                if (currentLevelState === 'PLATFORM_1') {
+                    if (clickedUnitX === L2_LADDER_UNIT_X && Math.abs(ogre1X - L2_LADDER_UNIT_X) < 1.0) {
+                        currentLevelState = 'LADDER_1';
+                        targetY = L2_PLAT2_Y;
+                        isMoving = true;
+                        moveDirectionY = 1;
+                        setActionMessage("Les ogres descendent à l'échelle...");
+                        return;
+                    }
+                } else if (currentLevelState === 'PLATFORM_2') {
+                    if (clickedUnitX === L2_LADDER_UNIT_X && Math.abs(ogre1X - L2_LADDER_UNIT_X) < 1.0) {
+                        if (hasKey) {
+                            currentLevelState = 'LADDER_2';
+                            targetY = L2_PLAT3_Y;
+                            isMoving = true;
+                            moveDirectionY = 1;
+                            setActionMessage("Les ogres descendent à l'échelle !");
+                            return;
+                        } else {
+                            setActionMessage("Récupérez d'abord le bâton de céleri à droite.");
+                            return;
+                        }
+                    }
+                }
+
+                targetX = Math.min(Math.max(clickedUnitX, -1), 13);
+                if (targetX === Math.round(ogre1X)) return;
+                moveDirectionX = (targetX > ogre1X) ? 1 : -1;
+                isMoving = true;
+
+            } else if (currentLevel === 3) {
+                const baseStartX = L3_X_START;
+                const clickedUnitX = Math.floor((clickPxX - baseStartX) / UNIT_PIXELS);
+
+                if (currentLevelState === 'PLATFORM_1') {
+                    if (clickedUnitX === L3_VINE1_UNIT_X && Math.abs(ogre1X - L3_VINE1_UNIT_X) < 1.0) {
+                        currentLevelState = 'VINE_1';
+                        targetY = L3_PLAT2_Y;
+                        isMoving = true;
+                        moveDirectionY = -1;
+                        setActionMessage("Les ogres grimpent à la liane...");
+                        return;
+                    }
+                } else if (currentLevelState === 'PLATFORM_3') {
+                    if (clickedUnitX === L3_VINE2_UNIT_X && Math.abs(ogre1X - L3_VINE2_UNIT_X) < 1.0) {
+                        currentLevelState = 'VINE_2';
+                        targetY = L3_PLAT4_Y;
+                        isMoving = true;
+                        moveDirectionY = -1;
+                        setActionMessage("Les ogres grimpent à la liane...");
+                        return;
+                    }
+                }
+
+                targetX = Math.min(Math.max(clickedUnitX, -1), 15);
+                if (targetX === Math.round(ogre1X)) return;
+                moveDirectionX = (targetX > ogre1X) ? 1 : -1;
+                isMoving = true;
+
+            } else if (currentLevel === 4) {
+                if (!isMoving && !hasWon) {
+                    currentLevelState = 'LADDER';
+                    targetY = L4_PLAT2_Y;
+                    isMoving = true;
+                    moveDirectionY = 1;
+                    setActionMessage("Les ogres descendent à l'échelle...");
+                }
+                return;
+
+            } else if (currentLevel === 5) {
+                const baseStartX = L5_PLAT1_X_START;
+                const clickedUnitX = Math.floor((clickPxX - baseStartX) / UNIT_PIXELS);
+
+                if (currentLevelState === 'PLATFORM_1') {
+                    if (clickedUnitX === L5_VINE_UNIT_X && Math.abs(ogre1X - L5_VINE_UNIT_X) < 1.0) {
+                        currentLevelState = 'VINE_1';
+                        targetY = L5_PLAT2_Y;
+                        isMoving = true;
+                        moveDirectionY = -1;
+                        setActionMessage("Les ogres grimpent à la liane...");
+                        return;
+                    }
+                } else if (currentLevelState === 'PLATFORM_2') {
+                    if (clickedUnitX === L5_VINE_UNIT_X && Math.abs(ogre1X - L5_VINE_UNIT_X) < 1.0) {
+                        if (hasTurnip) {
+                            currentLevelState = 'VINE_2';
+                            targetY = L5_PLAT3_Y;
+                            isMoving = true;
+                            moveDirectionY = -1;
+                            setActionMessage("Les ogres grimpent vers l'ultime plateforme !");
+                            return;
+                        } else {
+                            setActionMessage("La liane est bloquée ! Récupérez d'abord le navet à droite.");
+                            return;
+                        }
+                    }
+                }
+
+                targetX = Math.min(Math.max(clickedUnitX, -1), 13);
+                if (targetX === Math.round(ogre1X)) return;
+                moveDirectionX = (targetX > ogre1X) ? 1 : -1;
+                isMoving = true;
+            }
+        });
+
+        function gameLoop() {
+            animFrameCounter++;
+
+            if (isFalling) {
+                fallVelocityY += 0.4;
+                fallOffsetY += fallVelocityY;
+
+                if (fallOffsetY > 600) {
+                    switchLevel(currentLevel);
+                }
+            } else if (isEnteringDoor) {
+                updateDoorSequence();
+            } else if (isMoving) {
+                if (currentLevel === 1) updateLevel1Movement();
+                else if (currentLevel === 2) updateLevel2Movement();
+                else if (currentLevel === 3) updateLevel3Movement();
+                else if (currentLevel === 4) updateLevel4Movement();
+                else if (currentLevel === 5) updateLevel5Movement();
+            }
+
+            // Horizontal & Vertical Camera tracking
+            let baseStartX = (currentLevel === 1) ? L1_X_START : ((currentLevel === 2) ? L2_PLAT1_X_START : ((currentLevel === 3) ? L3_X_START : ((currentLevel === 4) ? L4_X_START : L5_PLAT1_X_START)));
+            let activeOgreX = ogre1Visible ? ogre1X : (ogre2Visible ? ogre2X : ogre3X);
+            let activeOgreY = ogre1Visible ? ogre1Y : (ogre2Visible ? ogre2Y : ogre3Y);
+            let ogreCenterPxX = baseStartX + activeOgreX * UNIT_PIXELS + (UNIT_PIXELS / 2);
+            let desiredCameraX = ogreCenterPxX - (V_WIDTH / 2);
+            let desiredCameraY = activeOgreY - (V_HEIGHT / 2);
+
+            cameraX += (desiredCameraX - cameraX) * 0.1;
+            cameraY += (desiredCameraY - cameraY) * 0.1;
+
+            ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
+            ctx.save();
+            ctx.translate(-cameraX, -cameraY);
+
+            drawBackground();
+
+            if (currentLevel === 1) {
+                drawPlankPlatform(L1_X_START + L1_PLAT1_START_UNIT * UNIT_PIXELS, L1_PLAT1_Y, L1_PLAT1_UNITS, 'wood');
+                drawLadder(L1_X_START + L1_LADDER_UNIT_X * UNIT_PIXELS + 20, L1_PLAT1_Y, L1_PLAT2_Y - L1_PLAT1_Y);
+                drawPlankPlatform(L1_X_START, L1_PLAT2_Y, L1_PLAT2_UNITS, 'wood');
+                drawVine(L1_X_START + L1_VINE_UNIT_X * UNIT_PIXELS + 22, L1_PLAT3_Y, L1_PLAT2_Y - L1_PLAT3_Y);
+                drawPlankPlatform(L1_X_START, L1_PLAT3_Y, L1_PLAT3_UNITS, 'wood');
+                drawDoor(L1_X_START + L1_DOOR3_UNIT_X * UNIT_PIXELS, L1_PLAT3_Y, hasWon || isEnteringDoor);
+
+            } else if (currentLevel === 2) {
+                drawPlankPlatform(L2_PLAT1_X_START, L2_PLAT1_Y, L2_PLAT1_UNITS, 'purple');
+                drawLadder(L2_PLAT1_X_START + L2_LADDER_UNIT_X * UNIT_PIXELS + 20, L2_PLAT1_Y, L2_PLAT2_Y - L2_PLAT1_Y);
+                drawPlankPlatform(L2_PLAT1_X_START, L2_PLAT2_Y, L2_PLAT2_UNITS, 'purple');
+                drawLadder(L2_PLAT1_X_START + L2_LADDER_UNIT_X * UNIT_PIXELS + 20, L2_PLAT2_Y, L2_PLAT3_Y - L2_PLAT2_Y);
+                
+                if (!hasKey) {
+                    drawPadlock(L2_PLAT1_X_START + L2_LADDER_UNIT_X * UNIT_PIXELS + 28, L2_PLAT2_Y + 10);
+                    drawCeleryItem(L2_PLAT1_X_START + L2_KEY_UNIT_X * UNIT_PIXELS, L2_PLAT2_Y);
+                }
+
+                drawPlankPlatform(L2_PLAT1_X_START, L2_PLAT3_Y, L2_PLAT3_UNITS, 'purple');
+                drawDoor(L2_PLAT1_X_START + L2_DOOR3_UNIT_X * UNIT_PIXELS, L2_PLAT3_Y, hasWon || isEnteringDoor);
+
+            } else if (currentLevel === 3) {
+                drawPlankPlatform(L3_X_START + L3_PLAT1_START_UNIT * UNIT_PIXELS, L3_PLAT1_Y, L3_PLAT1_UNITS, 'volcanic');
+                drawVine(L3_X_START + L3_VINE1_UNIT_X * UNIT_PIXELS + 22, L3_PLAT2_Y, L3_PLAT1_Y - L3_PLAT2_Y);
+                drawPlankPlatform(L3_X_START + L3_PLAT2_START_UNIT * UNIT_PIXELS, L3_PLAT2_Y, L3_PLAT2_UNITS, 'volcanic');
+
+                for (let u = 2; u <= 12; u++) {
+                    const stepY = getL3HeightForUnit(u);
+                    drawPlankPlatform(L3_X_START + u * UNIT_PIXELS, stepY, 1, 'volcanic');
+                }
+                const floatOffset = Math.sin(animFrameCounter * 0.1) * 3;
+
+                BREAD_UNITS.forEach((unitX, index) => {
+                    if (!collectedBreads[index]) {
+                        // Déclaration et calcul des coordonnées X et Y pour chaque pain
+                        const screenPxX = L3_X_START + unitX * UNIT_PIXELS + (UNIT_PIXELS / 2);
+                        const stepY = getL3HeightForUnit(unitX);
+                        const screenPxY = stepY - 20 + floatOffset;
+
+                        // Appel de la fonction avec les variables bien définies
+                        drawBreadItemAt(screenPxX, screenPxY);
+                    }
+                });
+
+                drawPlankPlatform(L3_X_START + L3_PLAT3_START_UNIT * UNIT_PIXELS, L3_PLAT3_Y, L3_PLAT3_UNITS, 'volcanic');
+                drawVine(L3_X_START + L3_VINE2_UNIT_X * UNIT_PIXELS + 22, L3_PLAT4_Y, L3_PLAT3_Y - L3_PLAT4_Y);
+                drawPlankPlatform(L3_X_START + L3_PLAT4_START_UNIT * UNIT_PIXELS, L3_PLAT4_Y, L3_PLAT4_UNITS, 'volcanic');
+                drawDoor(L3_X_START + L3_DOOR_UNIT_X * UNIT_PIXELS, L3_PLAT4_Y, hasWon || isEnteringDoor);
+
+            } else if (currentLevel === 4) {
+                drawPlankPlatform(L4_X_START + L4_PLAT1_START_UNIT * UNIT_PIXELS, L4_PLAT1_Y, L4_PLAT1_UNITS, 'ice');
+                drawLadder(L4_X_START + L4_LADDER_UNIT_X * UNIT_PIXELS + 20, L4_PLAT1_Y, L4_PLAT2_Y - L4_PLAT1_Y);
+                drawPlankPlatform(L4_X_START + L4_PLAT2_START_UNIT * UNIT_PIXELS, L4_PLAT2_Y, L4_PLAT2_UNITS, 'ice');
+                drawDoor(L4_X_START + L4_DOOR_UNIT_X * UNIT_PIXELS, L4_PLAT2_Y, hasWon || isEnteringDoor);
+
+            } else if (currentLevel === 5) {
+                drawPlankPlatform(L5_PLAT1_X_START, L5_PLAT1_Y, L5_PLAT1_UNITS, 'moss');
+                drawVine(L5_PLAT1_X_START + L5_VINE_UNIT_X * UNIT_PIXELS + 22, L5_PLAT2_Y, L5_PLAT1_Y - L5_PLAT2_Y);
+                drawPlankPlatform(L5_PLAT1_X_START, L5_PLAT2_Y, L5_PLAT2_UNITS, 'moss');
+                drawVine(L5_PLAT1_X_START + L5_VINE_UNIT_X * UNIT_PIXELS + 22, L5_PLAT3_Y, L5_PLAT2_Y - L5_PLAT3_Y);
+
+                if (!hasTurnip) {
+                    drawPadlock(L5_PLAT1_X_START + L5_VINE_UNIT_X * UNIT_PIXELS + 28, L5_PLAT2_Y - 20);
+                    drawTurnipItem(L5_PLAT1_X_START + L5_TURNIP_UNIT_X * UNIT_PIXELS, L5_PLAT2_Y);
+                }
+
+                drawPlankPlatform(L5_PLAT1_X_START, L5_PLAT3_Y, L5_PLAT3_UNITS, 'moss');
+                drawGuard(L5_PLAT1_X_START + L5_GUARD_UNIT_X * UNIT_PIXELS, L5_PLAT3_Y);
+            }
+
+            drawOgres();
+
+            ctx.restore();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function() {
+            switchLevel(1);
+            requestAnimationFrame(gameLoop);
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('intro-overlay');
+            const startBtn = document.getElementById('start-btn');
+
+            if (overlay && startBtn) {
+                startBtn.addEventListener('click', (e) => {
+                    // Empêche le clic du bouton de faire bouger les ogres immédiatement
+                    e.stopPropagation(); 
+                    overlay.style.display = 'none';
+                });
+            }
+        });
+
+        let dialogTriggered = false; // Empêche la conversation de se déclencher en boucle
+
+// Vérification de la position à chaque frame (à appeler dans la boucle d'actualisation du jeu)
+        function checkGuardProximity() {
+            // On vérifie le niveau, que le dialogue n'a pas eu lieu, ET que l'ogre est sur la plateforme 3
+            if (currentLevel === 5 && !dialogTriggered && ogre1Y === L5_PLAT3_Y) {
+                // L'ogre doit être en X = 10 (juste à gauche du garde qui est en 11)
+                if (Math.abs(ogre1X - (L5_GUARD_UNIT_X - 1)) < 0.2) {
+                    dialogTriggered = true;
+                    ogre1X = L5_GUARD_UNIT_X - 1;
+                    isMoving = false;
+                    currentLevelState = 'DIALOG';
+                    showGuardDialog();
+                    showDialogue("Gardien", "Je suis le gardien du Prince de Lu. On ne passera pas sans le mot de passe.", [
+                        { label: "Bonjour Beau-gosse.", callback: () => handleOgreChoice(1) },
+                        { label: "Bonjour Monsieur, j'ai le mot de passe.", callback: () => handleOgreChoice(2) },
+                        { label: "On va te bouffer.", callback: () => handleOgreChoice(3) }
+                    ]);
+                }
+            }
+        }
+
+        function showGuardDialog() {
+            const dialogOverlay = document.getElementById('dialog-overlay');
+            if (dialogOverlay) {
+                dialogOverlay.style.display = 'flex';
+            }
+        }
+
+        function BGDialog() {
+            comptBG++;
+
+            const dialogOverlay = document.getElementById('dialog-overlay');
+            if (dialogOverlay) {
+                dialogOverlay.style.display = 'flex';
+            }
+            switch (comptBG) {
+                case 1:
+                    updateDialogText("- Hum... pas de familiarité ! Je ne suis pas là pour ça.");
+                    updateDialogChoice(1, "Mais c'est que je n'ai jamais vu un être aussi charismatique que vous.", () => {BGDialog();});
+                    break;
+                case 2:
+                    updateDialogText("- Vous exagérez ! Et de toute façon, je suis incorruptible.");
+                    updateDialogChoice(1, "Dommage. Nous avons ramassés des pains pendant notre voyage. Ils seraient sûrement très jolis chez vous.", () => {BGDialog();});
+                    break;
+                case 3:
+                    updateDialogText("Hum... C'est vrai que je n'ai pas eu l'occasion d'aller en chercher cette année.");
+                    updateDialogChoice(1, "Alors... C'est avec plaisir que nous vous les offrons.", () => {BGDialog();});
+                    break;
+                case 4:
+                    updateDialogText("C'est de la corruption. Je ne veux pas.");
+                    updateDialogChoice(1, "Mais peut-être, pourrions-nous en discuter autour d'un verre un de ces quatre ?", () => {BGDialog();});
+                    break;
+                case 5:
+                    updateDialogText("Hum... pourquoi pas ?! Toi, tu as beaucoup de charme avec ta peau verte. Je finis mon service à minuit... ");
+                    updateDialogChoice(1, "Oh cette nouvelle me met en joie. Où peut-on se retrouver ? ", () => {BGDialog();});
+                    break;
+                case 6:
+                    if (pwdGiven){
+                    showDialogue("Gardien", "Tiens, passe par cette porte, tu pourras m'attendre à la prochaine auberge.", [
+                        {label :"On va te bouffer.", callback:()=>handleOgreChoice(3)} ]);
+                    }else{                    
+                        showDialogue("Gardien", "Tiens, passe par cette porte, tu pourras m'attendre à la prochaine auberge.", [
+                        {label :"Bonjour Monsieur, j'ai le mot de passe.", callback:()=>handleOgreChoice(2)},
+                        {label :"On va te bouffer.", callback:()=>handleOgreChoice(3)} ]);}
+                    isGreenOgreSoloMoving = true;
+                    targetX = 12; // Coordonnée X de la porte
+                    moveDirectionX = (targetX > ogre2X) ? 1 : -1;
+                    isMoving = true;
+                    comptOgre++;
+                    break;
+            }            
+        }
+
+
+        // Gestion des choix (en attente de vos instructions pour la suite)
+        function handleOgreChoice(choiceNumber) {
+            switch (choiceNumber) {
+                case 1:
+                    console.log("Choix 1 sélectionné : Bonjour Beau-gosse.");
+                    BGDialog();
+                    break;
+                case 2:
+                    console.log("Choix 2 sélectionné : Bonjour Monsieur, j'ai le mot de passe.");
+                    showPasswordInput();
+                    break;
+                case 3:
+                    console.log("Choix 3 sélectionné : On va te bouffer.");
+                    saveCurrentChoices();
+                    const textElement = document.getElementById('dialog-text');
+                    if (textElement) previousDialogText = textElement.textContent;
+                    showViolenceWarning();
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
